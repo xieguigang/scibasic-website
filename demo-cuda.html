@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="dark" />
+<meta name="description" content="Compile plain VB.NET math functions to CUDA kernels at runtime: IL decompilation, AST, NVRTC and GPU launch in one script." />
+<title>sciBASIC# — Tutorial: IL → CUDA, VB.NET on the GPU</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#030303;--ink:#eaeaea;--dim:#8a8f98;--faint:#565b63;--hairline:rgba(255,255,255,.14);
+--hairline2:rgba(255,255,255,.07);--red:#ff3b2f;--panel:#0b0d10;}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:Inter,-apple-system,'Segoe UI',sans-serif;
+font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+.mono{font-family:ui-monospace, 'Cascadia Mono', 'JetBrains Mono', Consolas, 'Courier New', monospace}
+/* top bar */
+.topbar{position:fixed;inset:0 0 auto 0;z-index:50;display:flex;align-items:center;
+justify-content:space-between;padding:18px 34px;background:linear-gradient(rgba(3,3,3,.92),rgba(3,3,3,.55) 70%,transparent)}
+.brand{display:flex;align-items:center;gap:10px;font-size:14px;letter-spacing:.06em}
+.brand img{width:20px;height:20px}
+.topnav{display:flex;gap:26px;font-family:ui-monospace, 'Cascadia Mono', 'JetBrains Mono', Consolas, 'Courier New', monospace;font-size:11px;letter-spacing:.12em;color:var(--dim)}
+.topnav a:hover{color:var(--ink)}
+/* hero */
+.wrap{max-width:1060px;margin:0 auto;padding:0 34px}
+.hero{padding:158px 0 30px;border-bottom:1px solid var(--hairline2)}
+.kicker{font-family:ui-monospace, 'Cascadia Mono', 'JetBrains Mono', Consolas, 'Courier New', monospace;font-size:11px;letter-spacing:.22em;color:var(--red)}
+h1{font-size:clamp(30px,4.6vw,52px);font-weight:600;letter-spacing:-.02em;line-height:1.08;margin:14px 0 14px}
+h1 .u{color:var(--dim);font-weight:400}
+.lede{max-width:680px;color:var(--dim);font-size:15.5px}
+.meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px}
+.meta div{border:1px solid var(--hairline);padding:8px 14px;font-family:ui-monospace, 'Cascadia Mono', 'JetBrains Mono', Consolas, 'Courier New', monospace;font-size:10.5px;
+letter-spacing:.1em;color:var(--dim);text-transform:uppercase}
+.meta b{color:var(--ink);font-weight:500}
+/* sections */
+section{padding:58px 0;border-bottom:1px solid var(--hairline2)}
+h2{font-family:ui-monospace, 'Cascadia Mono', 'JetBrains Mono', Consolas, 'Courier New', monospace;font-size:11.5px;font-weight:500;letter-spacing:.24em;text-transform:uppercase;
+color:var(--faint);margin-bottom:26px}
+h2 em{font-style:normal;color:var(--red)}
+/* code blocks */
+.code{background:var(--panel);border:1px solid var(--hairline2);overflow-x:auto;
+font-family:ui-monospace, 'Cascadia Mono', 'JetBrains Mono', Consolas, 'Courier New', monospace;font-size:12.5px;line-height:1.62;padding:22px 24px;color:#c6cbd2;tab-size:4}
+.code pre{white-space:pre}
+.k-kw{color:#e8e8e8;font-weight:600}.k-com{color:#5d636c;font-style:italic}
+.k-str{color:#c98f6d}.k-num{color:#7fb3a4}.k-pre{color:#b58bd8}
+details{border:1px solid var(--hairline2);border-top:none}
+details:first-of-type{border-top:1px solid var(--hairline2)}
+summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:14px;
+padding:14px 20px;font-family:ui-monospace, 'Cascadia Mono', 'JetBrains Mono', Consolas, 'Courier New', monospace;font-size:12px;letter-spacing:.08em;color:var(--dim);
+background:#08090b;user-select:none}
+summary:hover{color:var(--ink)}
+summary .arrow{color:var(--red);font-size:10px;transition:transform .25s}
+details[open] .arrow{transform:rotate(90deg)}
+details .code{border:none}
+/* figure */
+figure{margin:0}
+figure img{display:block;width:100%;max-width:880px;border:1px solid var(--hairline2)}
+figcaption{font-family:ui-monospace, 'Cascadia Mono', 'JetBrains Mono', Consolas, 'Courier New', monospace;font-size:11px;letter-spacing:.1em;color:var(--faint);margin-top:12px}
+/* table */
+.tblwrap{border:1px solid var(--hairline2);overflow-x:auto;max-height:480px;overflow-y:auto}
+table{border-collapse:collapse;width:100%;font-family:ui-monospace, 'Cascadia Mono', 'JetBrains Mono', Consolas, 'Courier New', monospace;font-size:12px}
+th{position:sticky;top:0;background:#101318;color:var(--dim);font-weight:500;letter-spacing:.08em;
+text-align:left;padding:9px 16px;border-bottom:1px solid var(--hairline)}
+td{padding:7px 16px;border-bottom:1px solid var(--hairline2);color:#b9bfc7;white-space:nowrap}
+tr:hover td{background:#0d1014}
+.badge{display:inline-block;min-width:20px;text-align:center;padding:0 6px;border:1px solid}
+.badge.c1{color:#c0504d;border-color:#c0504d66}
+.badge.c2{color:#4d84c0;border-color:#4d84c066}
+.badge.c3{color:#7ba05b;border-color:#7ba05b66}
+tr.more td{color:var(--faint);font-style:italic}
+/* terminal */
+.term{border:1px solid var(--hairline2);background:#050607}
+.termbar{display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid var(--hairline2);
+font-family:ui-monospace, 'Cascadia Mono', 'JetBrains Mono', Consolas, 'Courier New', monospace;font-size:10.5px;letter-spacing:.12em;color:var(--faint)}
+.termbar i{width:8px;height:8px;background:#24282e;display:inline-block}
+.termscroll{max-height:600px;overflow:auto;padding:20px 22px;font-family:ui-monospace, 'Cascadia Mono', 'JetBrains Mono', Consolas, 'Courier New', monospace;font-size:12px;
+line-height:1.6;color:#a9b0b8;white-space:pre}
+.t-rule{color:#3a3f46}.t-title{color:#e4e7ea;font-weight:600}.t-sub{color:#c98f6d}
+.t-ok{color:#7ec97e;font-weight:600}.t-fail{color:#ff6b6b;font-weight:600}.t-hl{color:#d9dee4}
+/* prose */
+.note{max-width:760px;color:var(--dim);font-size:14px}
+.note b{color:var(--ink);font-weight:500}
+.note code{font-family:ui-monospace, 'Cascadia Mono', 'JetBrains Mono', Consolas, 'Courier New', monospace;font-size:12.5px;color:#c98f6d;background:#101216;padding:1px 6px}
+/* pipeline */
+.pipe{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-family:ui-monospace, 'Cascadia Mono', 'JetBrains Mono', Consolas, 'Courier New', monospace;font-size:11.5px;margin:6px 0 4px}
+.pipe span{border:1px solid var(--hairline);padding:8px 13px;color:var(--ink);background:#0b0d10}
+.pipe i{color:var(--red);font-style:normal}
+/* footer pager */
+.pager{display:flex;justify-content:space-between;gap:20px;padding:44px 0 70px}
+.pager a{flex:1;border:1px solid var(--hairline);padding:18px 20px;font-family:ui-monospace, 'Cascadia Mono', 'JetBrains Mono', Consolas, 'Courier New', monospace;font-size:11px;
+letter-spacing:.12em;color:var(--dim);text-transform:uppercase;transition:border-color .25s,color .25s}
+.pager a:hover{border-color:rgba(255,255,255,.45);color:var(--ink)}
+.pager a b{display:block;color:var(--ink);font-weight:500;font-size:13px;letter-spacing:.04em;
+text-transform:none;margin-top:6px}
+.pager a.nx{text-align:right}
+.foot{padding:0 34px 40px;text-align:center;font-family:ui-monospace, 'Cascadia Mono', 'JetBrains Mono', Consolas, 'Courier New', monospace;font-size:10.5px;
+letter-spacing:.14em;color:var(--faint)}
+.foot a{color:var(--dim)}.foot a:hover{color:var(--ink)}
+@media(max-width:720px){.topbar{padding:14px 18px}.wrap{padding:0 18px}.hero{padding-top:120px}}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <a class="brand" href="./"><strong>sciBASIC#</strong></a>
+  <nav class="topnav">
+    <a href="https://github.com/xieguigang/sciBASIC" target="_blank" rel="noopener">Library—</a>
+    <a href="demo-kmeans.html">K-means demo</a>
+    <a href="demo-cuda.html" style="color:#eaeaea">IL&rarr;CUDA demo</a>
+  </nav>
+</header>
+<main class="wrap">
+
+<div class="hero">
+  <div class="kicker">TUTORIAL 02 / GPU COMPUTING</div>
+  <h1>IL &rarr; CUDA:<br /><span class="u">VB.NET functions compiled to the GPU</span></h1>
+  <p class="lede">Six ordinary VB.NET math functions — no CUDA concepts anywhere — are
+  decompiled from IL, rebuilt as an AST, emitted as <b>.cu</b> source, compiled at
+  runtime by NVRTC and launched on the GPU to evaluate a 1024 × 1024 Pearson
+  correlation matrix and Euclidean distance matrix.</p>
+  <div class="meta">
+    <div>matrix <b>1024 × 1024</b></div>
+    <div>device <b>RTX A4000 · NVRTC 13.3 · sm_86</b></div>
+    <div>max error <b>2.221E-007</b></div>
+    <div>run <b>vbs.exe cuda.vb</b></div>
+  </div>
+</div>
+
+<section>
+  <h2><em>01</em> — How it works</h2>
+  <div class="pipe">
+    <span>VB.NET function</span><i>→</i>
+    <span>IL bytecode</span><i>→</i>
+    <span>AST</span><i>→</i>
+    <span>.cu source</span><i>→</i>
+    <span>NVRTC</span><i>→</i>
+    <span>cuLaunchKernel</span>
+  </div>
+  <p class="note">Kernel shape is inferred from the parameter list, so you never write
+  thread-index boilerplate: a parameter named <code>i</code> maps to a 1-D grid,
+  <code>i</code> + <code>j</code> to a 2-D grid, and a pure-scalar function is wrapped
+  element-wise automatically. After translation the same AST is replayed on a CPU
+  interpreter and diffed against the original method as a self-check — every kernel
+  in this tutorial reports <b>OK</b> before it ever touches the GPU.</p>
+</section>
+
+<section>
+  <h2><em>02</em> — The script · cuda.vb (573 lines)</h2>
+  <details open><summary><span class="arrow">▶</span>SECTION 1 · KERNEL FUNCTIONS — PEARSONMETRICS</summary><div class="code"><pre><span class="k-com">&#x27; ---------------------------------------------------------------------------</span>
+<span class="k-com">&#x27;  第 1 节: 待反编译的目标函数</span>
+<span class="k-com">&#x27;</span>
+<span class="k-com">&#x27;  下面全部是普通的 VB.NET 写法, 不含任何 CUDA 概念。IL2Cuda 会在运行时把它们</span>
+<span class="k-com">&#x27;  反编译成表达式树, 再发射成 .cu。</span>
+<span class="k-com">&#x27;</span>
+<span class="k-com">&#x27;  设第 i 行 sum_i = Σx, sq_i = Σx², dot_ij = Σx_ik·x_jk, n = 列数:</span>
+<span class="k-com">&#x27;      mean_i  = sum_i / n</span>
+<span class="k-com">&#x27;      var_i   = sq_i - n * mean_i²</span>
+<span class="k-com">&#x27;      corr_ij = (dot_ij - n * mean_i * mean_j) / sqrt(var_i * var_j)</span>
+<span class="k-com">&#x27;      dist_ij = sqrt(sq_i + sq_j - 2 * dot_ij)</span>
+<span class="k-com">&#x27;</span>
+<span class="k-com">&#x27;  对角线在数学上恒为 corr=1 / dist=0, 这里直接返回, 避免单精度下两个相近</span>
+<span class="k-com">&#x27;  大数相减把舍入误差放大(见 README 的数值注意点)。</span>
+<span class="k-com">&#x27; ---------------------------------------------------------------------------</span>
+
+<span class="k-kw">Public</span> <span class="k-kw">Class</span> PearsonMetrics
+
+    <span class="k-com">&#x27; 行求和, 对应约定 1: 形参 i 为线程索引 -&gt; 一维内核</span>
+    <span class="k-kw">Public</span> <span class="k-kw">Shared</span> <span class="k-kw">Function</span> RowSum(x <span class="k-kw">As</span> <span class="k-kw">Single</span>(), cols <span class="k-kw">As</span> <span class="k-kw">Integer</span>, i <span class="k-kw">As</span> <span class="k-kw">Integer</span>) <span class="k-kw">As</span> <span class="k-kw">Single</span>
+        <span class="k-kw">Dim</span> sum <span class="k-kw">As</span> <span class="k-kw">Single</span> = <span class="k-num">0</span>.<span class="k-num">0F</span>
+
+        <span class="k-kw">For</span> k <span class="k-kw">As</span> <span class="k-kw">Integer</span> = <span class="k-num">0</span> <span class="k-kw">To</span> cols - <span class="k-num">1</span>
+            sum += x(i * cols + k)
+        <span class="k-kw">Next</span>
+
+        <span class="k-kw">Return</span> sum
+    <span class="k-kw">End</span> <span class="k-kw">Function</span>
+
+    <span class="k-com">&#x27; 行平方和, 同样是一维内核</span>
+    <span class="k-kw">Public</span> <span class="k-kw">Shared</span> <span class="k-kw">Function</span> RowSumSq(x <span class="k-kw">As</span> <span class="k-kw">Single</span>(), cols <span class="k-kw">As</span> <span class="k-kw">Integer</span>, i <span class="k-kw">As</span> <span class="k-kw">Integer</span>) <span class="k-kw">As</span> <span class="k-kw">Single</span>
+        <span class="k-kw">Dim</span> sumSq <span class="k-kw">As</span> <span class="k-kw">Single</span> = <span class="k-num">0</span>.<span class="k-num">0F</span>
+
+        <span class="k-kw">For</span> k <span class="k-kw">As</span> <span class="k-kw">Integer</span> = <span class="k-num">0</span> <span class="k-kw">To</span> cols - <span class="k-num">1</span>
+            <span class="k-kw">Dim</span> v <span class="k-kw">As</span> <span class="k-kw">Single</span> = x(i * cols + k)
+            sumSq += v * v
+        <span class="k-kw">Next</span>
+
+        <span class="k-kw">Return</span> sumSq
+    <span class="k-kw">End</span> <span class="k-kw">Function</span>
+
+    <span class="k-com">&#x27; 两行的点积, 对应约定 2: 同时有 i 和 j -&gt; 二维内核</span>
+    <span class="k-kw">Public</span> <span class="k-kw">Shared</span> <span class="k-kw">Function</span> GramDot(x <span class="k-kw">As</span> <span class="k-kw">Single</span>(), cols <span class="k-kw">As</span> <span class="k-kw">Integer</span>, i <span class="k-kw">As</span> <span class="k-kw">Integer</span>, j <span class="k-kw">As</span> <span class="k-kw">Integer</span>) <span class="k-kw">As</span> <span class="k-kw">Single</span>
+        <span class="k-kw">Dim</span> acc <span class="k-kw">As</span> <span class="k-kw">Single</span> = <span class="k-num">0</span>.<span class="k-num">0F</span>
+
+        <span class="k-kw">For</span> k <span class="k-kw">As</span> <span class="k-kw">Integer</span> = <span class="k-num">0</span> <span class="k-kw">To</span> cols - <span class="k-num">1</span>
+            acc += x(i * cols + k) * x(j * cols + k)
+        <span class="k-kw">Next</span>
+
+        <span class="k-kw">Return</span> acc
+    <span class="k-kw">End</span> <span class="k-kw">Function</span>
+
+    <span class="k-com">&#x27; 皮尔逊相关单元: guard clause + if/else 菱形 + MathF 调用</span>
+    <span class="k-kw">Public</span> <span class="k-kw">Shared</span> <span class="k-kw">Function</span> CorrelationCell(dot <span class="k-kw">As</span> <span class="k-kw">Single</span>(), rowSum <span class="k-kw">As</span> <span class="k-kw">Single</span>(), rowSumSq <span class="k-kw">As</span> <span class="k-kw">Single</span>(),
+                                           rows <span class="k-kw">As</span> <span class="k-kw">Integer</span>, cols <span class="k-kw">As</span> <span class="k-kw">Integer</span>,
+                                           i <span class="k-kw">As</span> <span class="k-kw">Integer</span>, j <span class="k-kw">As</span> <span class="k-kw">Integer</span>) <span class="k-kw">As</span> <span class="k-kw">Single</span>
+        <span class="k-kw">If</span> i = j <span class="k-kw">Then</span>
+            <span class="k-kw">Return</span> <span class="k-num">1</span>.<span class="k-num">0F</span>
+        <span class="k-kw">End</span> <span class="k-kw">If</span>
+
+        <span class="k-kw">Dim</span> n <span class="k-kw">As</span> <span class="k-kw">Single</span> = <span class="k-kw">CSng</span>(cols)
+        <span class="k-kw">Dim</span> meanI <span class="k-kw">As</span> <span class="k-kw">Single</span> = rowSum(i) / n
+        <span class="k-kw">Dim</span> meanJ <span class="k-kw">As</span> <span class="k-kw">Single</span> = rowSum(j) / n
+        <span class="k-kw">Dim</span> varI <span class="k-kw">As</span> <span class="k-kw">Single</span> = rowSumSq(i) - n * meanI * meanI
+        <span class="k-kw">Dim</span> varJ <span class="k-kw">As</span> <span class="k-kw">Single</span> = rowSumSq(j) - n * meanJ * meanJ
+        <span class="k-kw">Dim</span> d <span class="k-kw">As</span> <span class="k-kw">Single</span> = dot(i * rows + j)
+        <span class="k-kw">Dim</span> cov <span class="k-kw">As</span> <span class="k-kw">Single</span> = d - n * meanI * meanJ
+        <span class="k-kw">Dim</span> denom <span class="k-kw">As</span> <span class="k-kw">Single</span> = MathF.Sqrt(MathF.Max(varI, <span class="k-num">0</span>.<span class="k-num">0F</span>)) * MathF.Sqrt(MathF.Max(varJ, <span class="k-num">0</span>.<span class="k-num">0F</span>))
+        <span class="k-kw">Dim</span> c <span class="k-kw">As</span> <span class="k-kw">Single</span>
+
+        <span class="k-kw">If</span> denom &gt; <span class="k-num">1</span>.<span class="k-num">0E-12F</span> <span class="k-kw">Then</span>
+            c = cov / denom
+        <span class="k-kw">Else</span>
+            c = <span class="k-num">0</span>.<span class="k-num">0F</span>
+        <span class="k-kw">End</span> <span class="k-kw">If</span>
+
+        <span class="k-kw">Return</span> MathF.Min(<span class="k-num">1</span>.<span class="k-num">0F</span>, MathF.Max(-<span class="k-num">1</span>.<span class="k-num">0F</span>, c))
+    <span class="k-kw">End</span> <span class="k-kw">Function</span>
+
+    <span class="k-com">&#x27; 欧氏距离单元: guard clause + MathF.Sqrt</span>
+    <span class="k-kw">Public</span> <span class="k-kw">Shared</span> <span class="k-kw">Function</span> DistanceCell(dot <span class="k-kw">As</span> <span class="k-kw">Single</span>(), rowSumSq <span class="k-kw">As</span> <span class="k-kw">Single</span>(),
+                                        rows <span class="k-kw">As</span> <span class="k-kw">Integer</span>, i <span class="k-kw">As</span> <span class="k-kw">Integer</span>, j <span class="k-kw">As</span> <span class="k-kw">Integer</span>) <span class="k-kw">As</span> <span class="k-kw">Single</span>
+        <span class="k-kw">If</span> i = j <span class="k-kw">Then</span>
+            <span class="k-kw">Return</span> <span class="k-num">0</span>.<span class="k-num">0F</span>
+        <span class="k-kw">End</span> <span class="k-kw">If</span>
+
+        <span class="k-kw">Dim</span> d <span class="k-kw">As</span> <span class="k-kw">Single</span> = dot(i * rows + j)
+        <span class="k-kw">Dim</span> d2 <span class="k-kw">As</span> <span class="k-kw">Single</span> = MathF.Max(rowSumSq(i) + rowSumSq(j) - <span class="k-num">2</span>.<span class="k-num">0F</span> * d, <span class="k-num">0</span>.<span class="k-num">0F</span>)
+
+        <span class="k-kw">Return</span> MathF.Sqrt(d2)
+    <span class="k-kw">End</span> <span class="k-kw">Function</span>
+
+    <span class="k-com">&#x27; 纯标量截断, 对应约定 3: 没有 i/j, 也没有数组取元素 -&gt; 逐元素自动包裹</span>
+    <span class="k-kw">Public</span> <span class="k-kw">Shared</span> <span class="k-kw">Function</span> PearsonClamp(cov <span class="k-kw">As</span> <span class="k-kw">Single</span>, denom <span class="k-kw">As</span> <span class="k-kw">Single</span>) <span class="k-kw">As</span> <span class="k-kw">Single</span>
+        <span class="k-kw">Dim</span> c <span class="k-kw">As</span> <span class="k-kw">Single</span>
+
+        <span class="k-kw">If</span> denom &gt; <span class="k-num">1</span>.<span class="k-num">0E-12F</span> <span class="k-kw">Then</span>
+            c = cov / denom
+        <span class="k-kw">Else</span>
+            c = <span class="k-num">0</span>.<span class="k-num">0F</span>
+        <span class="k-kw">End</span> <span class="k-kw">If</span>
+
+        <span class="k-kw">Return</span> MathF.Min(<span class="k-num">1</span>.<span class="k-num">0F</span>, MathF.Max(-<span class="k-num">1</span>.<span class="k-num">0F</span>, c))
+    <span class="k-kw">End</span> <span class="k-kw">Function</span>
+<span class="k-kw">End</span> <span class="k-kw">Class</span>
+</pre></div></details><details><summary><span class="arrow">▶</span>SECTION 2 · CPU REFERENCE & SELF-CHECK — TUTORIALKIT</summary><div class="code"><pre><span class="k-com">&#x27; ---------------------------------------------------------------------------</span>
+<span class="k-com">&#x27;  第 2 节: 教程用的辅助代码(目标方法清单 / CPU 参考实现 / 排版 / 自检)</span>
+<span class="k-com">&#x27; ---------------------------------------------------------------------------</span>
+
+<span class="k-kw">Public</span> <span class="k-kw">Class</span> TutorialKit
+
+    <span class="k-com">&#x27;&#x27;&#x27; 全部待反编译的目标方法</span>
+    <span class="k-kw">Public</span> <span class="k-kw">Shared</span> <span class="k-kw">Function</span> Targets() <span class="k-kw">As</span> MethodInfo()
+        <span class="k-kw">Dim</span> t <span class="k-kw">As</span> Type = GetType(PearsonMetrics)
+
+        <span class="k-kw">Return</span> <span class="k-kw">New</span> MethodInfo() {
+            t.GetMethod(<span class="k-str">&quot;RowSum&quot;</span>),
+            t.GetMethod(<span class="k-str">&quot;RowSumSq&quot;</span>),
+            t.GetMethod(<span class="k-str">&quot;GramDot&quot;</span>),
+            t.GetMethod(<span class="k-str">&quot;CorrelationCell&quot;</span>),
+            t.GetMethod(<span class="k-str">&quot;DistanceCell&quot;</span>),
+            t.GetMethod(<span class="k-str">&quot;PearsonClamp&quot;</span>)
+        }
+    <span class="k-kw">End</span> <span class="k-kw">Function</span>
+
+    <span class="k-com">&#x27;&#x27;&#x27; 造一个可复现的随机矩阵(行主序)</span>
+    <span class="k-kw">Public</span> <span class="k-kw">Shared</span> <span class="k-kw">Function</span> MakeMatrix(rows <span class="k-kw">As</span> <span class="k-kw">Integer</span>, cols <span class="k-kw">As</span> <span class="k-kw">Integer</span>, seed <span class="k-kw">As</span> <span class="k-kw">Integer</span>) <span class="k-kw">As</span> <span class="k-kw">Single</span>()
+        <span class="k-kw">Dim</span> rnd <span class="k-kw">As</span> <span class="k-kw">New</span> Random(seed)
+        <span class="k-kw">Dim</span> data(rows * cols - <span class="k-num">1</span>) <span class="k-kw">As</span> <span class="k-kw">Single</span>
+
+        <span class="k-kw">For</span> i <span class="k-kw">As</span> <span class="k-kw">Integer</span> = <span class="k-num">0</span> <span class="k-kw">To</span> data.Length - <span class="k-num">1</span>
+            data(i) = <span class="k-kw">CSng</span>(rnd.NextDouble() * <span class="k-num">2</span>.<span class="k-num">0</span> - <span class="k-num">1</span>.<span class="k-num">0</span>)
+        <span class="k-kw">Next</span>
+
+        <span class="k-kw">Return</span> data
+    <span class="k-kw">End</span> <span class="k-kw">Function</span>
+
+    <span class="k-com">&#x27;&#x27;&#x27; 为解释求值自检造一组下标合法、数值不退化的样例参数</span>
+    <span class="k-kw">Public</span> <span class="k-kw">Shared</span> <span class="k-kw">Function</span> SampleArgs(m <span class="k-kw">As</span> MethodInfo) <span class="k-kw">As</span> <span class="k-kw">Object</span>()
+        <span class="k-kw">Dim</span> ps <span class="k-kw">As</span> ParameterInfo() = m.GetParameters()
+        <span class="k-kw">Dim</span> args(ps.Length - <span class="k-num">1</span>) <span class="k-kw">As</span> <span class="k-kw">Object</span>
+
+        <span class="k-kw">For</span> i <span class="k-kw">As</span> <span class="k-kw">Integer</span> = <span class="k-num">0</span> <span class="k-kw">To</span> ps.Length - <span class="k-num">1</span>
+            <span class="k-kw">Dim</span> p <span class="k-kw">As</span> ParameterInfo = ps(i)
+            <span class="k-kw">Dim</span> lower <span class="k-kw">As</span> <span class="k-kw">String</span> = p.Name.ToLowerInvariant()
+
+            <span class="k-kw">If</span> p.ParameterType.IsArray <span class="k-kw">Then</span>
+                <span class="k-kw">Dim</span> data(<span class="k-num">255</span>) <span class="k-kw">As</span> <span class="k-kw">Single</span>
+
+                <span class="k-kw">For</span> k <span class="k-kw">As</span> <span class="k-kw">Integer</span> = <span class="k-num">0</span> <span class="k-kw">To</span> <span class="k-num">255</span>
+                    data(k) = <span class="k-kw">CSng</span>((k <span class="k-kw">Mod</span> <span class="k-num">17</span>) - <span class="k-num">8</span>) * <span class="k-num">0</span>.<span class="k-num">5F</span>
+                <span class="k-kw">Next</span>
+
+                args(i) = data
+            <span class="k-kw">ElseIf</span> p.ParameterType = GetType(<span class="k-kw">Single</span>) <span class="k-kw">Then</span>
+                args(i) = <span class="k-num">1</span>.<span class="k-num">5F</span>
+            <span class="k-kw">ElseIf</span> p.ParameterType = GetType(<span class="k-kw">Integer</span>) <span class="k-kw">Then</span>
+                <span class="k-kw">Select</span> <span class="k-kw">Case</span> lower
+                    <span class="k-kw">Case</span> <span class="k-str">&quot;cols&quot;</span> : args(i) = <span class="k-num">8</span>
+                    <span class="k-kw">Case</span> <span class="k-str">&quot;rows&quot;</span> : args(i) = <span class="k-num">16</span>
+                    <span class="k-kw">Case</span> <span class="k-str">&quot;i&quot;</span> : args(i) = <span class="k-num">2</span>
+                    <span class="k-kw">Case</span> <span class="k-str">&quot;j&quot;</span> : args(i) = <span class="k-num">5</span>
+                    <span class="k-kw">Case</span> <span class="k-kw">Else</span> : args(i) = <span class="k-num">3</span>
+                <span class="k-kw">End</span> <span class="k-kw">Select</span>
+            <span class="k-kw">End</span> <span class="k-kw">If</span>
+        <span class="k-kw">Next</span>
+
+        <span class="k-kw">Return</span> args
+    <span class="k-kw">End</span> <span class="k-kw">Function</span>
+
+    <span class="k-com">&#x27;&#x27;&#x27; CPU 参考实现: 皮尔逊相关矩阵(双精度两遍算法)</span>
+    <span class="k-kw">Public</span> <span class="k-kw">Shared</span> <span class="k-kw">Function</span> CpuCorrelation(data <span class="k-kw">As</span> <span class="k-kw">Single</span>(), rows <span class="k-kw">As</span> <span class="k-kw">Integer</span>, cols <span class="k-kw">As</span> <span class="k-kw">Integer</span>) <span class="k-kw">As</span> <span class="k-kw">Double</span>()
+        <span class="k-kw">Dim</span> n <span class="k-kw">As</span> <span class="k-kw">Double</span> = cols
+        <span class="k-kw">Dim</span> mean(rows - <span class="k-num">1</span>) <span class="k-kw">As</span> <span class="k-kw">Double</span>
+        <span class="k-kw">Dim</span> sd(rows - <span class="k-num">1</span>) <span class="k-kw">As</span> <span class="k-kw">Double</span>
+
+        <span class="k-kw">For</span> i <span class="k-kw">As</span> <span class="k-kw">Integer</span> = <span class="k-num">0</span> <span class="k-kw">To</span> rows - <span class="k-num">1</span>
+            <span class="k-kw">Dim</span> s <span class="k-kw">As</span> <span class="k-kw">Double</span> = <span class="k-num">0</span>
+            <span class="k-kw">Dim</span> sq <span class="k-kw">As</span> <span class="k-kw">Double</span> = <span class="k-num">0</span>
+
+            <span class="k-kw">For</span> k <span class="k-kw">As</span> <span class="k-kw">Integer</span> = <span class="k-num">0</span> <span class="k-kw">To</span> cols - <span class="k-num">1</span>
+                <span class="k-kw">Dim</span> v <span class="k-kw">As</span> <span class="k-kw">Double</span> = data(i * cols + k)
+                s += v
+                sq += v * v
+            <span class="k-kw">Next</span>
+
+            mean(i) = s / n
+            sd(i) = System.Math.Sqrt(System.Math.Max(sq - n * mean(i) * mean(i), <span class="k-num">0</span>.<span class="k-num">0</span>))
+        <span class="k-kw">Next</span>
+
+        <span class="k-kw">Dim</span> out(rows * rows - <span class="k-num">1</span>) <span class="k-kw">As</span> <span class="k-kw">Double</span>
+
+        <span class="k-kw">For</span> i <span class="k-kw">As</span> <span class="k-kw">Integer</span> = <span class="k-num">0</span> <span class="k-kw">To</span> rows - <span class="k-num">1</span>
+            <span class="k-kw">For</span> j <span class="k-kw">As</span> <span class="k-kw">Integer</span> = <span class="k-num">0</span> <span class="k-kw">To</span> rows - <span class="k-num">1</span>
+                <span class="k-kw">Dim</span> d <span class="k-kw">As</span> <span class="k-kw">Double</span> = <span class="k-num">0</span>
+
+                <span class="k-kw">For</span> k <span class="k-kw">As</span> <span class="k-kw">Integer</span> = <span class="k-num">0</span> <span class="k-kw">To</span> cols - <span class="k-num">1</span>
+                    d += data(i * cols + k) * data(j * cols + k)
+                <span class="k-kw">Next</span>
+
+                <span class="k-kw">Dim</span> cov <span class="k-kw">As</span> <span class="k-kw">Double</span> = d - n * mean(i) * mean(j)
+                <span class="k-kw">Dim</span> den <span class="k-kw">As</span> <span class="k-kw">Double</span> = sd(i) * sd(j)
+                <span class="k-kw">Dim</span> c <span class="k-kw">As</span> <span class="k-kw">Double</span> = <span class="k-kw">If</span>(den &gt; <span class="k-num">0</span>.<span class="k-num">0</span>, cov / den, <span class="k-num">0</span>.<span class="k-num">0</span>)
+
+                out(i * rows + j) = <span class="k-kw">If</span>(i = j, <span class="k-num">1</span>.<span class="k-num">0</span>, System.Math.Min(<span class="k-num">1</span>.<span class="k-num">0</span>, System.Math.Max(-<span class="k-num">1</span>.<span class="k-num">0</span>, c)))
+            <span class="k-kw">Next</span>
+        <span class="k-kw">Next</span>
+
+        <span class="k-kw">Return</span> out
+    <span class="k-kw">End</span> <span class="k-kw">Function</span>
+
+    <span class="k-com">&#x27;&#x27;&#x27; CPU 参考实现: 欧氏距离矩阵</span>
+    <span class="k-kw">Public</span> <span class="k-kw">Shared</span> <span class="k-kw">Function</span> CpuDistance(data <span class="k-kw">As</span> <span class="k-kw">Single</span>(), rows <span class="k-kw">As</span> <span class="k-kw">Integer</span>, cols <span class="k-kw">As</span> <span class="k-kw">Integer</span>) <span class="k-kw">As</span> <span class="k-kw">Double</span>()
+        <span class="k-kw">Dim</span> sq(rows - <span class="k-num">1</span>) <span class="k-kw">As</span> <span class="k-kw">Double</span>
+
+        <span class="k-kw">For</span> i <span class="k-kw">As</span> <span class="k-kw">Integer</span> = <span class="k-num">0</span> <span class="k-kw">To</span> rows - <span class="k-num">1</span>
+            <span class="k-kw">Dim</span> s <span class="k-kw">As</span> <span class="k-kw">Double</span> = <span class="k-num">0</span>
+
+            <span class="k-kw">For</span> k <span class="k-kw">As</span> <span class="k-kw">Integer</span> = <span class="k-num">0</span> <span class="k-kw">To</span> cols - <span class="k-num">1</span>
+                <span class="k-kw">Dim</span> v <span class="k-kw">As</span> <span class="k-kw">Double</span> = data(i * cols + k)
+                s += v * v
+            <span class="k-kw">Next</span>
+
+            sq(i) = s
+        <span class="k-kw">Next</span>
+
+        <span class="k-kw">Dim</span> out(rows * rows - <span class="k-num">1</span>) <span class="k-kw">As</span> <span class="k-kw">Double</span>
+
+        <span class="k-kw">For</span> i <span class="k-kw">As</span> <span class="k-kw">Integer</span> = <span class="k-num">0</span> <span class="k-kw">To</span> rows - <span class="k-num">1</span>
+            <span class="k-kw">For</span> j <span class="k-kw">As</span> <span class="k-kw">Integer</span> = <span class="k-num">0</span> <span class="k-kw">To</span> rows - <span class="k-num">1</span>
+                <span class="k-kw">Dim</span> d <span class="k-kw">As</span> <span class="k-kw">Double</span> = <span class="k-num">0</span>
+
+                <span class="k-kw">For</span> k <span class="k-kw">As</span> <span class="k-kw">Integer</span> = <span class="k-num">0</span> <span class="k-kw">To</span> cols - <span class="k-num">1</span>
+                    d += data(i * cols + k) * data(j * cols + k)
+                <span class="k-kw">Next</span>
+
+                out(i * rows + j) = <span class="k-kw">If</span>(i = j, <span class="k-num">0</span>.<span class="k-num">0</span>,
+                    System.Math.Sqrt(System.Math.Max(sq(i) + sq(j) - <span class="k-num">2</span>.<span class="k-num">0</span> * d, <span class="k-num">0</span>.<span class="k-num">0</span>)))
+            <span class="k-kw">Next</span>
+        <span class="k-kw">Next</span>
+
+        <span class="k-kw">Return</span> out
+    <span class="k-kw">End</span> <span class="k-kw">Function</span>
+
+    <span class="k-com">&#x27;&#x27;&#x27; GPU 结果与 CPU 参考值之间的最大绝对误差</span>
+    <span class="k-kw">Public</span> <span class="k-kw">Shared</span> <span class="k-kw">Function</span> MaxError(got <span class="k-kw">As</span> <span class="k-kw">Single</span>(), expect <span class="k-kw">As</span> <span class="k-kw">Double</span>()) <span class="k-kw">As</span> <span class="k-kw">Double</span>
+        <span class="k-kw">Dim</span> maxDiff <span class="k-kw">As</span> <span class="k-kw">Double</span> = <span class="k-num">0</span>
+
+        <span class="k-kw">For</span> i <span class="k-kw">As</span> <span class="k-kw">Integer</span> = <span class="k-num">0</span> <span class="k-kw">To</span> got.Length - <span class="k-num">1</span>
+            <span class="k-kw">Dim</span> diff <span class="k-kw">As</span> <span class="k-kw">Double</span> = System.Math.Abs(<span class="k-kw">CDbl</span>(got(i)) - expect(i))
+
+            <span class="k-kw">If</span> diff &gt; maxDiff <span class="k-kw">Then</span>
+                maxDiff = diff
+            <span class="k-kw">End</span> <span class="k-kw">If</span>
+        <span class="k-kw">Next</span>
+
+        <span class="k-kw">Return</span> maxDiff
+    <span class="k-kw">End</span> <span class="k-kw">Function</span>
+
+    <span class="k-com">&#x27;&#x27;&#x27; GPU 结果与同为单精度的参考值之间的最大绝对误差</span>
+    <span class="k-kw">Public</span> <span class="k-kw">Shared</span> <span class="k-kw">Function</span> MaxErrorSingle(got <span class="k-kw">As</span> <span class="k-kw">Single</span>(), expect <span class="k-kw">As</span> <span class="k-kw">Single</span>()) <span class="k-kw">As</span> <span class="k-kw">Double</span>
+        <span class="k-kw">Dim</span> maxDiff <span class="k-kw">As</span> <span class="k-kw">Double</span> = <span class="k-num">0</span>
+
+        <span class="k-kw">For</span> i <span class="k-kw">As</span> <span class="k-kw">Integer</span> = <span class="k-num">0</span> <span class="k-kw">To</span> got.Length - <span class="k-num">1</span>
+            <span class="k-kw">Dim</span> diff <span class="k-kw">As</span> <span class="k-kw">Double</span> = System.Math.Abs(<span class="k-kw">CDbl</span>(got(i)) - <span class="k-kw">CDbl</span>(expect(i)))
+
+            <span class="k-kw">If</span> diff &gt; maxDiff <span class="k-kw">Then</span>
+                maxDiff = diff
+            <span class="k-kw">End</span> <span class="k-kw">If</span>
+        <span class="k-kw">Next</span>
+
+        <span class="k-kw">Return</span> maxDiff
+    <span class="k-kw">End</span> <span class="k-kw">Function</span>
+
+    <span class="k-com">&#x27;&#x27;&#x27; 双精度参考值转单精度, 便于复用同一套预览排版</span>
+    <span class="k-kw">Public</span> <span class="k-kw">Shared</span> <span class="k-kw">Function</span> ToSingle(source <span class="k-kw">As</span> <span class="k-kw">Double</span>()) <span class="k-kw">As</span> <span class="k-kw">Single</span>()
+        <span class="k-kw">Dim</span> out(source.Length - <span class="k-num">1</span>) <span class="k-kw">As</span> <span class="k-kw">Single</span>
+
+        <span class="k-kw">For</span> i <span class="k-kw">As</span> <span class="k-kw">Integer</span> = <span class="k-num">0</span> <span class="k-kw">To</span> source.Length - <span class="k-num">1</span>
+            out(i) = <span class="k-kw">CSng</span>(source(i))
+        <span class="k-kw">Next</span>
+
+        <span class="k-kw">Return</span> out
+    <span class="k-kw">End</span> <span class="k-kw">Function</span>
+
+    <span class="k-com">&#x27;&#x27;&#x27; 分节标题</span>
+    <span class="k-kw">Public</span> <span class="k-kw">Shared</span> <span class="k-kw">Sub</span> PrintTitle(text <span class="k-kw">As</span> <span class="k-kw">String</span>)
+        <span class="k-kw">Call</span> Console.WriteLine()
+        <span class="k-kw">Call</span> Console.WriteLine(<span class="k-kw">New</span> <span class="k-kw">String</span>(<span class="k-str">&quot;=&quot;</span>c, <span class="k-num">74</span>))
+        <span class="k-kw">Call</span> Console.WriteLine(<span class="k-str">&quot;  &quot;</span> &amp; text)
+        <span class="k-kw">Call</span> Console.WriteLine(<span class="k-kw">New</span> <span class="k-kw">String</span>(<span class="k-str">&quot;=&quot;</span>c, <span class="k-num">74</span>))
+    <span class="k-kw">End</span> <span class="k-kw">Sub</span>
+
+    <span class="k-com">&#x27;&#x27;&#x27; 缩进打印一段多行文本(伪代码 / CUDA 源码)</span>
+    <span class="k-kw">Public</span> <span class="k-kw">Shared</span> <span class="k-kw">Sub</span> PrintBlock(text <span class="k-kw">As</span> <span class="k-kw">String</span>, indent <span class="k-kw">As</span> <span class="k-kw">String</span>)
+        <span class="k-kw">Dim</span> lines <span class="k-kw">As</span> <span class="k-kw">String</span>() = Regex.Split(text, <span class="k-str">&quot;\r\n|\r|\n&quot;</span>)
+
+        <span class="k-kw">For</span> <span class="k-kw">Each</span> line <span class="k-kw">As</span> <span class="k-kw">String</span> <span class="k-kw">In</span> lines
+            <span class="k-kw">Call</span> Console.WriteLine(indent &amp; line)
+        <span class="k-kw">Next</span>
+    <span class="k-kw">End</span> <span class="k-kw">Sub</span>
+
+    <span class="k-com">&#x27;&#x27;&#x27; 打印结果矩阵的左上角 n x n</span>
+    <span class="k-kw">Public</span> <span class="k-kw">Shared</span> <span class="k-kw">Sub</span> PrintMatrix(title <span class="k-kw">As</span> <span class="k-kw">String</span>, m <span class="k-kw">As</span> <span class="k-kw">Single</span>(), rows <span class="k-kw">As</span> <span class="k-kw">Integer</span>, n <span class="k-kw">As</span> <span class="k-kw">Integer</span>)
+        <span class="k-kw">Call</span> Console.WriteLine(<span class="k-str">&quot;  &quot;</span> &amp; title)
+
+        <span class="k-kw">For</span> i <span class="k-kw">As</span> <span class="k-kw">Integer</span> = <span class="k-num">0</span> <span class="k-kw">To</span> n - <span class="k-num">1</span>
+            <span class="k-kw">Dim</span> line <span class="k-kw">As</span> <span class="k-kw">New</span> StringBuilder()
+
+            <span class="k-kw">For</span> j <span class="k-kw">As</span> <span class="k-kw">Integer</span> = <span class="k-num">0</span> <span class="k-kw">To</span> n - <span class="k-num">1</span>
+                <span class="k-kw">Call</span> line.Append(m(i * rows + j).ToString(<span class="k-str">&quot;F4&quot;</span>).PadLeft(<span class="k-num">10</span>))
+            <span class="k-kw">Next</span>
+
+            <span class="k-kw">Call</span> Console.WriteLine(<span class="k-str">&quot;    &quot;</span> &amp; line.ToString())
+        <span class="k-kw">Next</span>
+    <span class="k-kw">End</span> <span class="k-kw">Sub</span>
+<span class="k-kw">End</span> <span class="k-kw">Class</span>
+</pre></div></details><details><summary><span class="arrow">▶</span>SECTION 3 · MAIN PIPELINE — TRANSLATE, REGISTER, LAUNCH, VERIFY</summary><div class="code"><pre><span class="k-com">&#x27; ---------------------------------------------------------------------------</span>
+<span class="k-com">&#x27;  第 3 节: 主流程</span>
+<span class="k-com">&#x27; ---------------------------------------------------------------------------</span>
+
+<span class="k-kw">dim</span> rows <span class="k-kw">As</span> <span class="k-kw">Integer</span> = <span class="k-num">1024</span>
+<span class="k-kw">dim</span> cols <span class="k-kw">As</span> <span class="k-kw">Integer</span> = <span class="k-num">1024</span>
+<span class="k-kw">dim</span> seed <span class="k-kw">As</span> <span class="k-kw">Integer</span> = <span class="k-num">42</span>
+<span class="k-kw">dim</span> preview <span class="k-kw">As</span> <span class="k-kw">Integer</span> = <span class="k-num">6</span>
+<span class="k-kw">dim</span> allOk <span class="k-kw">As</span> <span class="k-kw">Boolean</span> = <span class="k-kw">True</span>
+
+<span class="k-kw">call</span> TutorialKit.PrintTitle(<span class="k-str">&quot;IL -&gt; CUDA 教程: 皮尔逊相关矩阵 与 欧氏距离矩阵&quot;</span>)
+<span class="k-kw">call</span> console.WriteLine(<span class="k-str">&quot;  输入规模: &quot;</span> &amp; rows &amp; <span class="k-str">&quot; 行 x &quot;</span> &amp; cols &amp; <span class="k-str">&quot; 列, 随机种子 &quot;</span> &amp; seed)
+
+<span class="k-com">&#x27; ---------- 造输入矩阵 ----------</span>
+<span class="k-kw">dim</span> data <span class="k-kw">As</span> <span class="k-kw">Single</span>() = TutorialKit.MakeMatrix(rows, cols, seed)
+
+<span class="k-com">&#x27; ---------- 第 1 步: IL -&gt; AST -&gt; .cu ----------</span>
+<span class="k-kw">dim</span> kernels <span class="k-kw">As</span> <span class="k-kw">New</span> Dictionary(Of <span class="k-kw">String</span>, IlCudaKernel)(StringComparer.Ordinal)
+
+<span class="k-kw">call</span> TutorialKit.PrintTitle(<span class="k-str">&quot;第 1 步: 把 VB.NET 函数反编译为 AST, 再发射成 .cu&quot;</span>)
+
+<span class="k-kw">for</span> <span class="k-kw">each</span> m <span class="k-kw">As</span> MethodInfo <span class="k-kw">In</span> TutorialKit.Targets()
+    <span class="k-kw">dim</span> errMsg <span class="k-kw">As</span> <span class="k-kw">String</span> = <span class="k-kw">Nothing</span>
+    <span class="k-kw">dim</span> kernel <span class="k-kw">As</span> IlCudaKernel = <span class="k-kw">Nothing</span>
+
+    <span class="k-kw">try</span>
+        kernel = IlCudaTranslator.Translate(m)
+    <span class="k-kw">catch</span> ex <span class="k-kw">As</span> Exception
+        errMsg = ex.GetBaseException().Message
+    <span class="k-kw">end</span> <span class="k-kw">try</span>
+
+    <span class="k-kw">if</span> errMsg <span class="k-kw">IsNot</span> <span class="k-kw">Nothing</span> <span class="k-kw">Then</span>
+        <span class="k-kw">call</span> console.WriteLine(<span class="k-str">&quot;  &quot;</span> &amp; m.Name &amp; <span class="k-str">&quot; 反编译失败: &quot;</span> &amp; errMsg)
+        allOk = <span class="k-kw">False</span>
+    <span class="k-kw">else</span>
+        <span class="k-kw">call</span> kernels.Add(m.Name, kernel)
+
+        <span class="k-kw">call</span> console.WriteLine()
+        <span class="k-kw">call</span> console.WriteLine(<span class="k-str">&quot;  ---- &quot;</span> &amp; m.Name &amp; <span class="k-str">&quot; ----&quot;</span>)
+        <span class="k-kw">call</span> console.WriteLine(<span class="k-str">&quot;  索引模式  : &quot;</span> &amp; kernel.IndexMode.ToString())
+        <span class="k-kw">call</span> console.WriteLine(<span class="k-str">&quot;  设备函数  : &quot;</span> &amp; kernel.DeviceFunctionName)
+        <span class="k-kw">call</span> console.WriteLine(<span class="k-str">&quot;  内核      : &quot;</span> &amp; kernel.Name)
+        <span class="k-kw">call</span> console.WriteLine()
+        <span class="k-kw">call</span> console.WriteLine(<span class="k-str">&quot;  还原出的伪代码:&quot;</span>)
+        <span class="k-kw">call</span> TutorialKit.PrintBlock(SyntaxWriter.WriteMethod(kernel.Syntax), <span class="k-str">&quot;    &quot;</span>)
+        <span class="k-kw">call</span> console.WriteLine()
+        <span class="k-kw">call</span> console.WriteLine(<span class="k-str">&quot;  生成的 CUDA 源码:&quot;</span>)
+        <span class="k-kw">call</span> TutorialKit.PrintBlock(kernel.Source, <span class="k-str">&quot;    &quot;</span>)
+
+        <span class="k-com">&#x27; 解释求值自检: 把同一棵 AST 交给 CPU 解释器执行, 与直接调用原方法比对</span>
+        <span class="k-kw">dim</span> sampleArgs <span class="k-kw">As</span> <span class="k-kw">Object</span>() = TutorialKit.SampleArgs(m)
+        <span class="k-kw">dim</span> expected <span class="k-kw">As</span> <span class="k-kw">Object</span> = m.Invoke(<span class="k-kw">Nothing</span>, sampleArgs)
+        <span class="k-kw">dim</span> actual <span class="k-kw">As</span> <span class="k-kw">Object</span> = <span class="k-kw">New</span> AstInterpreter(kernel.Syntax).Invoke(sampleArgs)
+        <span class="k-kw">dim</span> diff <span class="k-kw">As</span> <span class="k-kw">Double</span> = System.Math.Abs(System.Convert.ToDouble(expected) - System.Convert.ToDouble(actual))
+        <span class="k-kw">dim</span> tol <span class="k-kw">As</span> <span class="k-kw">Double</span> = <span class="k-num">1</span>.<span class="k-num">0E-5</span> * System.Math.Max(<span class="k-num">1</span>.<span class="k-num">0</span>, System.Math.Abs(System.Convert.ToDouble(expected)))
+        <span class="k-kw">dim</span> pass <span class="k-kw">As</span> <span class="k-kw">Boolean</span> = diff &lt;= tol
+
+        <span class="k-kw">call</span> console.WriteLine()
+        <span class="k-kw">call</span> console.WriteLine(<span class="k-str">&quot;  解释求值自检: 原方法=&quot;</span> &amp; expected &amp; <span class="k-str">&quot;, AST=&quot;</span> &amp; actual &amp;
+                               <span class="k-str">&quot;, 差=&quot;</span> &amp; diff.ToString(<span class="k-str">&quot;E3&quot;</span>) &amp; <span class="k-str">&quot;  &quot;</span> &amp; (<span class="k-kw">if</span>(pass, <span class="k-str">&quot;OK&quot;</span>, <span class="k-str">&quot;FAIL&quot;</span>)))
+
+        <span class="k-kw">if</span> <span class="k-kw">Not</span> pass <span class="k-kw">Then</span>
+            allOk = <span class="k-kw">False</span>
+        <span class="k-kw">end</span> <span class="k-kw">if</span>
+    <span class="k-kw">end</span> <span class="k-kw">if</span>
+<span class="k-kw">next</span>
+
+<span class="k-com">&#x27; ---------- 第 2 步: 把生成的 .cu 注册进 KernelSources ----------</span>
+<span class="k-kw">call</span> TutorialKit.PrintTitle(<span class="k-str">&quot;第 2 步: 注册内核源码(必须在创建引擎之前)&quot;</span>)
+
+<span class="k-kw">for</span> <span class="k-kw">each</span> k <span class="k-kw">As</span> IlCudaKernel <span class="k-kw">In</span> kernels.Values
+    <span class="k-kw">call</span> k.Register()
+    <span class="k-kw">call</span> console.WriteLine(<span class="k-str">&quot;  已注册 &quot;</span> &amp; k.ToString())
+<span class="k-kw">next</span>
+
+<span class="k-com">&#x27; ---------- 第 3 步: NVRTC 编译 + 启动内核 ----------</span>
+<span class="k-kw">call</span> TutorialKit.PrintTitle(<span class="k-str">&quot;第 3 步: 在 GPU 上计算相关矩阵与距离矩阵&quot;</span>)
+
+<span class="k-kw">dim</span> opts <span class="k-kw">As</span> <span class="k-kw">New</span> EngineOptions With {.DeviceOrdinal = <span class="k-num">0</span>}
+<span class="k-kw">dim</span> engine <span class="k-kw">As</span> CudaEngine = CudaEngine.TryCreate(opts)
+<span class="k-kw">dim</span> corrGPU <span class="k-kw">As</span> <span class="k-kw">Single</span>() = <span class="k-kw">Nothing</span>
+<span class="k-kw">dim</span> distGPU <span class="k-kw">As</span> <span class="k-kw">Single</span>() = <span class="k-kw">Nothing</span>
+<span class="k-kw">dim</span> gpuOk <span class="k-kw">As</span> <span class="k-kw">Boolean</span> = <span class="k-kw">False</span>
+
+<span class="k-kw">if</span> <span class="k-kw">Not</span> allOk <span class="k-kw">Then</span>
+    <span class="k-kw">call</span> console.WriteLine(<span class="k-str">&quot;  第 1 步存在失败项, 跳过 GPU 计算。&quot;</span>)
+<span class="k-kw">elseif</span> engine <span class="k-kw">Is</span> <span class="k-kw">Nothing</span> <span class="k-kw">Then</span>
+    <span class="k-kw">call</span> console.WriteLine(<span class="k-str">&quot;  GPU 不可用: &quot;</span> &amp; opts.ErrorMessage)
+
+    <span class="k-kw">dim</span> report = CudaEnvironment.Probe()
+
+    <span class="k-kw">for</span> <span class="k-kw">each</span> s <span class="k-kw">As</span> FixSuggestion <span class="k-kw">In</span> CudaEnvironment.Suggest(report)
+        <span class="k-kw">call</span> console.WriteLine(<span class="k-str">&quot;  建议: &quot;</span> &amp; s.ToString())
+        <span class="k-kw">call</span> console.WriteLine(<span class="k-str">&quot;        &quot;</span> &amp; s.Detail)
+    <span class="k-kw">next</span>
+
+    <span class="k-kw">call</span> console.WriteLine()
+    <span class="k-kw">call</span> console.WriteLine(<span class="k-str">&quot;  &gt;&gt; 已回退 CPU 参考实现, 下面只给出 CPU 结果。&quot;</span>)
+<span class="k-kw">else</span>
+    <span class="k-kw">using</span> engine
+        <span class="k-kw">dim</span> cells <span class="k-kw">As</span> <span class="k-kw">Integer</span> = rows * rows
+
+        <span class="k-kw">call</span> console.WriteLine(<span class="k-str">&quot;  设备      : &quot;</span> &amp; engine.Device.Name)
+        <span class="k-kw">call</span> console.WriteLine(<span class="k-str">&quot;  内核镜像  : &quot;</span> &amp; engine.Image.ToString())
+
+        <span class="k-kw">using</span> bufX <span class="k-kw">As</span> <span class="k-kw">New</span> DeviceBuffer(Of <span class="k-kw">Single</span>)(data.Length), _
+              bufSum <span class="k-kw">As</span> <span class="k-kw">New</span> DeviceBuffer(Of <span class="k-kw">Single</span>)(rows), _
+              bufSumSq <span class="k-kw">As</span> <span class="k-kw">New</span> DeviceBuffer(Of <span class="k-kw">Single</span>)(rows), _
+              bufDot <span class="k-kw">As</span> <span class="k-kw">New</span> DeviceBuffer(Of <span class="k-kw">Single</span>)(cells), _
+              bufCorr <span class="k-kw">As</span> <span class="k-kw">New</span> DeviceBuffer(Of <span class="k-kw">Single</span>)(cells), _
+              bufDist <span class="k-kw">As</span> <span class="k-kw">New</span> DeviceBuffer(Of <span class="k-kw">Single</span>)(cells)
+
+            <span class="k-kw">call</span> bufX.Write(data)
+
+            <span class="k-com">&#x27; 1) 行统计量: 一维内核, 一个线程负责一行</span>
+            <span class="k-kw">call</span> kernels(<span class="k-str">&quot;RowSum&quot;</span>).Launch(engine, LaunchPlanner.For1D(rows, <span class="k-num">256</span>), bufX, cols, bufSum, rows)
+            <span class="k-kw">call</span> kernels(<span class="k-str">&quot;RowSumSq&quot;</span>).Launch(engine, LaunchPlanner.For1D(rows, <span class="k-num">256</span>), bufX, cols, bufSumSq, rows)
+
+            <span class="k-com">&#x27; 2) Gram 点积: 二维内核</span>
+            <span class="k-kw">call</span> kernels(<span class="k-str">&quot;GramDot&quot;</span>).Launch(engine, LaunchPlanner.For2D(rows, rows, <span class="k-num">16</span>, <span class="k-num">16</span>), bufX, cols, bufDot, rows, rows)
+
+            <span class="k-com">&#x27; 3) 由点积与行统计量还原相关矩阵与距离矩阵</span>
+            <span class="k-kw">call</span> kernels(<span class="k-str">&quot;CorrelationCell&quot;</span>).Launch(engine, LaunchPlanner.For2D(rows, rows, <span class="k-num">16</span>, <span class="k-num">16</span>),
+                                                   bufDot, bufSum, bufSumSq, rows, cols, bufCorr, rows, rows)
+            <span class="k-kw">call</span> kernels(<span class="k-str">&quot;DistanceCell&quot;</span>).Launch(engine, LaunchPlanner.For2D(rows, rows, <span class="k-num">16</span>, <span class="k-num">16</span>),
+                                                bufDot, bufSumSq, rows, bufDist, rows, rows)
+
+            <span class="k-kw">call</span> engine.Synchronize()
+
+            corrGPU = bufCorr.Read()
+            distGPU = bufDist.Read()
+            gpuOk = <span class="k-kw">True</span>
+
+            <span class="k-com">&#x27; 4) 约定 3 的演示: 纯标量函数被自动包裹成逐元素内核</span>
+            <span class="k-kw">dim</span> hostDot <span class="k-kw">As</span> <span class="k-kw">Single</span>() = bufDot.Read()
+            <span class="k-kw">dim</span> hostSum <span class="k-kw">As</span> <span class="k-kw">Single</span>() = bufSum.Read()
+            <span class="k-kw">dim</span> hostSumSq <span class="k-kw">As</span> <span class="k-kw">Single</span>() = bufSumSq.Read()
+            <span class="k-kw">dim</span> n1 <span class="k-kw">As</span> <span class="k-kw">Single</span> = <span class="k-kw">CSng</span>(cols)
+            <span class="k-kw">dim</span> cov(cells - <span class="k-num">1</span>) <span class="k-kw">As</span> <span class="k-kw">Single</span>
+            <span class="k-kw">dim</span> denom(cells - <span class="k-num">1</span>) <span class="k-kw">As</span> <span class="k-kw">Single</span>
+            <span class="k-kw">dim</span> clampRef(cells - <span class="k-num">1</span>) <span class="k-kw">As</span> <span class="k-kw">Single</span>
+
+            <span class="k-kw">for</span> i <span class="k-kw">As</span> <span class="k-kw">Integer</span> = <span class="k-num">0</span> <span class="k-kw">To</span> rows - <span class="k-num">1</span>
+                <span class="k-kw">dim</span> meanI <span class="k-kw">As</span> <span class="k-kw">Single</span> = hostSum(i) / n1
+                <span class="k-kw">dim</span> varI <span class="k-kw">As</span> <span class="k-kw">Single</span> = hostSumSq(i) - n1 * meanI * meanI
+                <span class="k-kw">dim</span> sdI <span class="k-kw">As</span> <span class="k-kw">Single</span> = MathF.Sqrt(MathF.Max(varI, <span class="k-num">0</span>.<span class="k-num">0F</span>))
+
+                <span class="k-kw">for</span> j <span class="k-kw">As</span> <span class="k-kw">Integer</span> = <span class="k-num">0</span> <span class="k-kw">To</span> rows - <span class="k-num">1</span>
+                    <span class="k-kw">dim</span> meanJ <span class="k-kw">As</span> <span class="k-kw">Single</span> = hostSum(j) / n1
+                    <span class="k-kw">dim</span> varJ <span class="k-kw">As</span> <span class="k-kw">Single</span> = hostSumSq(j) - n1 * meanJ * meanJ
+                    <span class="k-kw">dim</span> idx <span class="k-kw">As</span> <span class="k-kw">Integer</span> = i * rows + j
+
+                    cov(idx) = hostDot(idx) - n1 * meanI * meanJ
+                    denom(idx) = sdI * MathF.Sqrt(MathF.Max(varJ, <span class="k-num">0</span>.<span class="k-num">0F</span>))
+                    clampRef(idx) = PearsonMetrics.PearsonClamp(cov(idx), denom(idx))
+                <span class="k-kw">next</span>
+            <span class="k-kw">next</span>
+
+            <span class="k-kw">using</span> bufCov <span class="k-kw">As</span> <span class="k-kw">New</span> DeviceBuffer(Of <span class="k-kw">Single</span>)(cells), _
+                  bufDenom <span class="k-kw">As</span> <span class="k-kw">New</span> DeviceBuffer(Of <span class="k-kw">Single</span>)(cells), _
+                  bufClamp <span class="k-kw">As</span> <span class="k-kw">New</span> DeviceBuffer(Of <span class="k-kw">Single</span>)(cells)
+
+                <span class="k-kw">call</span> bufCov.Write(cov)
+                <span class="k-kw">call</span> bufDenom.Write(denom)
+
+                <span class="k-kw">call</span> kernels(<span class="k-str">&quot;PearsonClamp&quot;</span>).Launch(engine, LaunchPlanner.For1D(cells, <span class="k-num">256</span>),
+                                                    bufCov, bufDenom, bufClamp, cells)
+                <span class="k-kw">call</span> engine.Synchronize()
+
+                <span class="k-kw">dim</span> clampErr <span class="k-kw">As</span> <span class="k-kw">Double</span> = TutorialKit.MaxErrorSingle(bufClamp.Read(), clampRef)
+                <span class="k-kw">dim</span> clampPass <span class="k-kw">As</span> <span class="k-kw">Boolean</span> = clampErr &lt;= <span class="k-num">1</span>.<span class="k-num">0E-5</span>
+
+                <span class="k-kw">call</span> console.WriteLine()
+                <span class="k-kw">call</span> console.WriteLine(<span class="k-str">&quot;  PearsonClamp(逐元素自动包裹) 最大绝对误差 = &quot;</span> &amp;
+                                       clampErr.ToString(<span class="k-str">&quot;E3&quot;</span>) &amp; <span class="k-str">&quot;  &quot;</span> &amp; (<span class="k-kw">if</span>(clampPass, <span class="k-str">&quot;OK&quot;</span>, <span class="k-str">&quot;FAIL&quot;</span>)))
+
+                <span class="k-kw">if</span> <span class="k-kw">Not</span> clampPass <span class="k-kw">Then</span>
+                    allOk = <span class="k-kw">False</span>
+                <span class="k-kw">end</span> <span class="k-kw">if</span>
+            <span class="k-kw">end</span> <span class="k-kw">using</span>
+        <span class="k-kw">end</span> <span class="k-kw">using</span>
+    <span class="k-kw">end</span> <span class="k-kw">using</span>
+<span class="k-kw">end</span> <span class="k-kw">if</span>
+
+<span class="k-com">&#x27; ---------- 第 4 步: 与 CPU 参考实现比对 ----------</span>
+<span class="k-kw">call</span> TutorialKit.PrintTitle(<span class="k-str">&quot;第 4 步: CPU 参考实现比对 + 结果预览&quot;</span>)
+
+<span class="k-kw">dim</span> refCorr <span class="k-kw">As</span> <span class="k-kw">Double</span>() = TutorialKit.CpuCorrelation(data, rows, cols)
+<span class="k-kw">dim</span> refDist <span class="k-kw">As</span> <span class="k-kw">Double</span>() = TutorialKit.CpuDistance(data, rows, cols)
+
+<span class="k-kw">if</span> gpuOk <span class="k-kw">Then</span>
+    <span class="k-kw">dim</span> eCorr <span class="k-kw">As</span> <span class="k-kw">Double</span> = TutorialKit.MaxError(corrGPU, refCorr)
+    <span class="k-kw">dim</span> eDist <span class="k-kw">As</span> <span class="k-kw">Double</span> = TutorialKit.MaxError(distGPU, refDist)
+    <span class="k-kw">dim</span> corrPass <span class="k-kw">As</span> <span class="k-kw">Boolean</span> = eCorr &lt;= <span class="k-num">1</span>.<span class="k-num">0E-3</span>
+    <span class="k-kw">dim</span> distPass <span class="k-kw">As</span> <span class="k-kw">Boolean</span> = eDist &lt;= <span class="k-num">1</span>.<span class="k-num">0E-2</span>
+
+    <span class="k-kw">call</span> console.WriteLine(<span class="k-str">&quot;  皮尔逊相关矩阵 最大绝对误差 = &quot;</span> &amp; eCorr.ToString(<span class="k-str">&quot;E3&quot;</span>) &amp; <span class="k-str">&quot;  &quot;</span> &amp; (<span class="k-kw">if</span>(corrPass, <span class="k-str">&quot;OK&quot;</span>, <span class="k-str">&quot;FAIL&quot;</span>)))
+    <span class="k-kw">call</span> console.WriteLine(<span class="k-str">&quot;  欧氏距离矩阵   最大绝对误差 = &quot;</span> &amp; eDist.ToString(<span class="k-str">&quot;E3&quot;</span>) &amp; <span class="k-str">&quot;  &quot;</span> &amp; (<span class="k-kw">if</span>(distPass, <span class="k-str">&quot;OK&quot;</span>, <span class="k-str">&quot;FAIL&quot;</span>)))
+
+    <span class="k-kw">if</span> (<span class="k-kw">Not</span> corrPass) <span class="k-kw">OrElse</span> (<span class="k-kw">Not</span> distPass) <span class="k-kw">Then</span>
+        allOk = <span class="k-kw">False</span>
+    <span class="k-kw">end</span> <span class="k-kw">if</span>
+
+    <span class="k-kw">call</span> console.WriteLine()
+    <span class="k-kw">call</span> TutorialKit.PrintMatrix(<span class="k-str">&quot;皮尔逊相关矩阵(GPU, 左上 &quot;</span> &amp; preview &amp; <span class="k-str">&quot; x &quot;</span> &amp; preview &amp; <span class="k-str">&quot;):&quot;</span>, corrGPU, rows, preview)
+    <span class="k-kw">call</span> console.WriteLine()
+    <span class="k-kw">call</span> TutorialKit.PrintMatrix(<span class="k-str">&quot;欧氏距离矩阵(GPU, 左上 &quot;</span> &amp; preview &amp; <span class="k-str">&quot; x &quot;</span> &amp; preview &amp; <span class="k-str">&quot;):&quot;</span>, distGPU, rows, preview)
+<span class="k-kw">else</span>
+    <span class="k-kw">call</span> console.WriteLine(<span class="k-str">&quot;  GPU 结果不可用, 下面是 CPU 参考实现的结果。&quot;</span>)
+    <span class="k-kw">call</span> console.WriteLine()
+    <span class="k-kw">call</span> TutorialKit.PrintMatrix(<span class="k-str">&quot;皮尔逊相关矩阵(CPU, 左上 &quot;</span> &amp; preview &amp; <span class="k-str">&quot; x &quot;</span> &amp; preview &amp; <span class="k-str">&quot;):&quot;</span>, TutorialKit.ToSingle(refCorr), rows, preview)
+    <span class="k-kw">call</span> console.WriteLine()
+    <span class="k-kw">call</span> TutorialKit.PrintMatrix(<span class="k-str">&quot;欧氏距离矩阵(CPU, 左上 &quot;</span> &amp; preview &amp; <span class="k-str">&quot; x &quot;</span> &amp; preview &amp; <span class="k-str">&quot;):&quot;</span>, TutorialKit.ToSingle(refDist), rows, preview)
+<span class="k-kw">end</span> <span class="k-kw">if</span>
+
+<span class="k-kw">call</span> console.WriteLine()
+
+<span class="k-kw">if</span> allOk <span class="k-kw">Then</span>
+    <span class="k-kw">call</span> console.WriteLine(<span class="k-str">&quot;教程全部步骤通过。&quot;</span>)
+<span class="k-kw">else</span>
+    <span class="k-kw">call</span> console.WriteLine(<span class="k-str">&quot;存在失败项, 请查看上面的输出。&quot;</span>)
+<span class="k-kw">end</span> <span class="k-kw">if</span>
+</pre></div></details>
+</section>
+
+<section>
+  <h2><em>03</em> — Console output · stdout.txt</h2>
+  <div class="term">
+    <div class="termbar"><i></i><i></i><i></i><span>VBS ENGINE — PearsonMetrics ON NVIDIA RTX A4000</span></div>
+    <div class="termscroll"><span class="t-rule">==========================================================================</span>
+  IL -&gt; CUDA 教程: 皮尔逊相关矩阵 与 欧氏距离矩阵
+<span class="t-rule">==========================================================================</span>
+  输入规模: 1024 行 x 1024 列, 随机种子 42
+
+<span class="t-rule">==========================================================================</span>
+<span class="t-title">  第 1 步: 把 VB.NET 函数反编译为 AST, 再发射成 .cu</span>
+<span class="t-rule">==========================================================================</span>
+
+<span class="t-sub">  ---- RowSum ----</span>
+  索引模式  : Grid1D
+<span class="t-hl">  设备函数  : il_RowSum_scalar</span>
+  内核      : il_RowSum_kernel
+
+  还原出的伪代码:
+    Shared Function RowSum(p_x As Single(), p_cols As Integer, p_i As Integer) As Single
+        Dim V_0 As Single = 0F
+        Dim V_1 As Integer = 0
+        Dim V_2 As Integer = 0
+        Dim V_0_1 As Single
+        Dim V_2_1 As Integer
+        Dim V_0_2 As Single = 0F
+        Dim V_1_1 As Integer = (p_cols - 1)
+        Dim V_2_2 As Integer = 0
+        V_0_1 = V_0_2
+        For V_2_1 = V_2_2 While (V_2_1 &lt;= V_1_1) Step ((V_2_1 + 1) - V_2_1)
+            Dim V_0_3 As Single = (V_0_1 + p_x[((p_i * p_cols) + V_2_1)])
+            V_0_1 = V_0_3
+        Next
+        Return V_0_1
+    End Function
+    
+
+  生成的 CUDA 源码:
+    // ===== 本文件由 IL -&gt; AST -&gt; CUDA 流水线自动生成，请勿手工编辑 =====
+    // 来源方法 : RowSum
+    // 设备函数 : il_RowSum_scalar
+    // 内核     : il_RowSum_kernel（索引模式 Grid1D）
+    
+    __device__ float il_RowSum_scalar(const float* __restrict__ p_x, int p_cols, int p_i) {
+        float V_0 = 0.0f;
+        int V_1 = 0;
+        int V_2 = 0;
+        float V_0_1;
+        int V_2_1;
+        float V_0_2 = 0.0f;
+        int V_1_1 = p_cols - 1;
+        int V_2_2 = 0;
+        V_0_1 = V_0_2;
+        for (V_2_1 = V_2_2; V_2_1 &lt;= V_1_1; V_2_1 = V_2_1 + 1) {
+            float V_0_3 = V_0_1 + p_x[(p_i * p_cols) + V_2_1];
+            V_0_1 = V_0_3;
+        }
+        return V_0_1;
+    }
+    
+    extern &quot;C&quot; __global__ void il_RowSum_kernel(const float* __restrict__ p_x, int p_cols, float* __restrict__ il_out, int il_n) {
+        int p_i = blockIdx.x * blockDim.x + threadIdx.x;
+        if (p_i &gt;= il_n) return;
+        il_out[p_i] = il_RowSum_scalar(p_x, p_cols, p_i);
+    }
+    
+
+  解释求值自检: 原方法=-13.5, AST=-13.5, 差=0.000E+000  <span class="t-ok">OK</span>
+
+<span class="t-sub">  ---- RowSumSq ----</span>
+  索引模式  : Grid1D
+<span class="t-hl">  设备函数  : il_RowSumSq_scalar</span>
+  内核      : il_RowSumSq_kernel
+
+  还原出的伪代码:
+    Shared Function RowSumSq(p_x As Single(), p_cols As Integer, p_i As Integer) As Single
+        Dim V_0 As Single = 0F
+        Dim V_1 As Integer = 0
+        Dim V_2 As Integer = 0
+        Dim V_3 As Single = 0F
+        Dim V_0_1 As Single
+        Dim V_2_1 As Integer
+        Dim V_3_1 As Single
+        Dim V_0_2 As Single = 0F
+        Dim V_1_1 As Integer = (p_cols - 1)
+        Dim V_2_2 As Integer = 0
+        V_0_1 = V_0_2
+        V_3_1 = V_3
+        For V_2_1 = V_2_2 While (V_2_1 &lt;= V_1_1) Step ((V_2_1 + 1) - V_2_1)
+            Dim V_3_2 As Single = p_x[((p_i * p_cols) + V_2_1)]
+            Dim V_0_3 As Single = (V_0_1 + (V_3_2 * V_3_2))
+            V_0_1 = V_0_3
+            V_3_1 = V_3_2
+        Next
+        Return V_0_1
+    End Function
+    
+
+  生成的 CUDA 源码:
+    // ===== 本文件由 IL -&gt; AST -&gt; CUDA 流水线自动生成，请勿手工编辑 =====
+    // 来源方法 : RowSumSq
+    // 设备函数 : il_RowSumSq_scalar
+    // 内核     : il_RowSumSq_kernel（索引模式 Grid1D）
+    
+    __device__ float il_RowSumSq_scalar(const float* __restrict__ p_x, int p_cols, int p_i) {
+        float V_0 = 0.0f;
+        int V_1 = 0;
+        int V_2 = 0;
+        float V_3 = 0.0f;
+        float V_0_1;
+        int V_2_1;
+        float V_3_1;
+        float V_0_2 = 0.0f;
+        int V_1_1 = p_cols - 1;
+        int V_2_2 = 0;
+        V_0_1 = V_0_2;
+        V_3_1 = V_3;
+        for (V_2_1 = V_2_2; V_2_1 &lt;= V_1_1; V_2_1 = V_2_1 + 1) {
+            float V_3_2 = p_x[(p_i * p_cols) + V_2_1];
+            float V_0_3 = V_0_1 + (V_3_2 * V_3_2);
+            V_0_1 = V_0_3;
+            V_3_1 = V_3_2;
+        }
+        return V_0_1;
+    }
+    
+    extern &quot;C&quot; __global__ void il_RowSumSq_kernel(const float* __restrict__ p_x, int p_cols, float* __restrict__ il_out, int il_n) {
+        int p_i = blockIdx.x * blockDim.x + threadIdx.x;
+        if (p_i &gt;= il_n) return;
+        il_out[p_i] = il_RowSumSq_scalar(p_x, p_cols, p_i);
+    }
+    
+
+  解释求值自检: 原方法=66.75, AST=66.75, 差=0.000E+000  <span class="t-ok">OK</span>
+
+<span class="t-sub">  ---- GramDot ----</span>
+  索引模式  : Grid2D
+<span class="t-hl">  设备函数  : il_GramDot_scalar</span>
+  内核      : il_GramDot_kernel
+
+  还原出的伪代码:
+    Shared Function GramDot(p_x As Single(), p_cols As Integer, p_i As Integer, p_j As Integer) As Single
+        Dim V_0 As Single = 0F
+        Dim V_1 As Integer = 0
+        Dim V_2 As Integer = 0
+        Dim V_0_1 As Single
+        Dim V_2_1 As Integer
+        Dim V_0_2 As Single = 0F
+        Dim V_1_1 As Integer = (p_cols - 1)
+        Dim V_2_2 As Integer = 0
+        V_0_1 = V_0_2
+        For V_2_1 = V_2_2 While (V_2_1 &lt;= V_1_1) Step ((V_2_1 + 1) - V_2_1)
+            Dim V_0_3 As Single = (V_0_1 + (p_x[((p_i * p_cols) + V_2_1)] * p_x[((p_j * p_cols) + V_2_1)]))
+            V_0_1 = V_0_3
+        Next
+        Return V_0_1
+    End Function
+    
+
+  生成的 CUDA 源码:
+    // ===== 本文件由 IL -&gt; AST -&gt; CUDA 流水线自动生成，请勿手工编辑 =====
+    // 来源方法 : GramDot
+    // 设备函数 : il_GramDot_scalar
+    // 内核     : il_GramDot_kernel（索引模式 Grid2D）
+    
+    __device__ float il_GramDot_scalar(const float* __restrict__ p_x, int p_cols, int p_i, int p_j) {
+        float V_0 = 0.0f;
+        int V_1 = 0;
+        int V_2 = 0;
+        float V_0_1;
+        int V_2_1;
+        float V_0_2 = 0.0f;
+        int V_1_1 = p_cols - 1;
+        int V_2_2 = 0;
+        V_0_1 = V_0_2;
+        for (V_2_1 = V_2_2; V_2_1 &lt;= V_1_1; V_2_1 = V_2_1 + 1) {
+            float V_0_3 = V_0_1 + (p_x[(p_i * p_cols) + V_2_1] * p_x[(p_j * p_cols) + V_2_1]);
+            V_0_1 = V_0_3;
+        }
+        return V_0_1;
+    }
+    
+    extern &quot;C&quot; __global__ void il_GramDot_kernel(const float* __restrict__ p_x, int p_cols, float* __restrict__ il_out, int il_nRows, int il_nCols) {
+        int p_i = blockIdx.y * blockDim.y + threadIdx.y;
+        int p_j = blockIdx.x * blockDim.x + threadIdx.x;
+        if (p_i &gt;= il_nRows || p_j &gt;= il_nCols) return;
+        il_out[p_i * il_nCols + p_j] = il_GramDot_scalar(p_x, p_cols, p_i, p_j);
+    }
+    
+
+  解释求值自检: 原方法=-14.5, AST=-14.5, 差=0.000E+000  <span class="t-ok">OK</span>
+
+<span class="t-sub">  ---- CorrelationCell ----</span>
+  索引模式  : Grid2D
+<span class="t-hl">  设备函数  : il_CorrelationCell_scalar</span>
+  内核      : il_CorrelationCell_kernel
+
+  还原出的伪代码:
+    Shared Function CorrelationCell(p_dot As Single(), p_rowSum As Single(), p_rowSumSq As Single(), p_rows As Integer, p_cols As Integer, p_i As Integer, p_j As Integer) As Single
+        Dim V_0 As Single = 0F
+        Dim V_1 As Single = 0F
+        Dim V_2 As Single = 0F
+        Dim V_3 As Single = 0F
+        Dim V_4 As Single = 0F
+        Dim V_5 As Single = 0F
+        Dim V_6 As Single = 0F
+        Dim V_7 As Single = 0F
+        Dim V_0_1 As Single
+        Dim V_1_1 As Single
+        Dim V_2_1 As Single
+        Dim V_3_1 As Single
+        Dim V_4_1 As Single
+        Dim V_5_1 As Single
+        Dim V_6_1 As Single
+        Dim V_7_2 As Single
+        Dim V_7_1 As Single
+        If (p_i &lt;&gt; p_j) Then
+            Dim V_1_2 As Single = CType(p_cols, Single)
+            Dim V_2_2 As Single = (p_rowSum[p_i] / V_1_2)
+            Dim V_3_2 As Single = (p_rowSum[p_j] / V_1_2)
+            Dim V_4_2 As Single = (p_rowSumSq[p_j] - ((V_1_2 * V_3_2) * V_3_2))
+            Dim V_5_2 As Single = (p_dot[((p_i * p_rows) + p_j)] - ((V_1_2 * V_2_2) * V_3_2))
+            Dim V_6_2 As Single = (System.MathF.Sqrt(System.MathF.Max((p_rowSumSq[p_i] - ((V_1_2 * V_2_2) * V_2_2)), 0F)) * System.MathF.Sqrt(System.MathF.Max(V_4_2, 0F)))
+            If (V_6_2 &lt;= 1E-12F) Then
+                Dim V_7_4 As Single = 0F
+                V_7_1 = V_7_4
+            Else
+                Dim V_7_3 As Single = (V_5_2 / V_6_2)
+                V_7_1 = V_7_3
+            End If
+            Dim V_0_3 As Single = System.MathF.Min(1F, System.MathF.Max(-1F, V_7_1))
+            V_0_1 = V_0_3
+            V_1_1 = V_1_2
+            V_2_1 = V_2_2
+            V_3_1 = V_3_2
+            V_4_1 = V_4_2
+            V_5_1 = V_5_2
+            V_6_1 = V_6_2
+            V_7_2 = V_7_1
+        Else
+            Dim V_0_2 As Single = 1F
+            V_0_1 = V_0_2
+            V_1_1 = V_1
+            V_2_1 = V_2
+            V_3_1 = V_3
+            V_4_1 = V_4
+            V_5_1 = V_5
+            V_6_1 = V_6
+            V_7_2 = V_7
+        End If
+        Return V_0_1
+    End Function
+    
+
+  生成的 CUDA 源码:
+    // ===== 本文件由 IL -&gt; AST -&gt; CUDA 流水线自动生成，请勿手工编辑 =====
+    // 来源方法 : CorrelationCell
+    // 设备函数 : il_CorrelationCell_scalar
+    // 内核     : il_CorrelationCell_kernel（索引模式 Grid2D）
+    
+    __device__ float il_CorrelationCell_scalar(const float* __restrict__ p_dot, const float* __restrict__ p_rowSum, const float* __restrict__ p_rowSumSq, int p_rows, int p_cols, int p_i, int p_j) {
+        float V_0 = 0.0f;
+        float V_1 = 0.0f;
+        float V_2 = 0.0f;
+        float V_3 = 0.0f;
+        float V_4 = 0.0f;
+        float V_5 = 0.0f;
+        float V_6 = 0.0f;
+        float V_7 = 0.0f;
+        float V_0_1;
+        float V_1_1;
+        float V_2_1;
+        float V_3_1;
+        float V_4_1;
+        float V_5_1;
+        float V_6_1;
+        float V_7_2;
+        float V_7_1;
+        if (p_i != p_j) {
+            float V_1_2 = ((float)p_cols);
+            float V_2_2 = p_rowSum[p_i] / V_1_2;
+            float V_3_2 = p_rowSum[p_j] / V_1_2;
+            float V_4_2 = p_rowSumSq[p_j] - ((V_1_2 * V_3_2) * V_3_2);
+            float V_5_2 = p_dot[(p_i * p_rows) + p_j] - ((V_1_2 * V_2_2) * V_3_2);
+            float V_6_2 = sqrtf(fmaxf(p_rowSumSq[p_i] - ((V_1_2 * V_2_2) * V_2_2), 0.0f)) * sqrtf(fmaxf(V_4_2, 0.0f));
+            if (V_6_2 &lt;= 1E-12f) {
+                float V_7_4 = 0.0f;
+                V_7_1 = V_7_4;
+            } else {
+                float V_7_3 = V_5_2 / V_6_2;
+                V_7_1 = V_7_3;
+            }
+            float V_0_3 = fminf(1.0f, fmaxf(-1.0f, V_7_1));
+            V_0_1 = V_0_3;
+            V_1_1 = V_1_2;
+            V_2_1 = V_2_2;
+            V_3_1 = V_3_2;
+            V_4_1 = V_4_2;
+            V_5_1 = V_5_2;
+            V_6_1 = V_6_2;
+            V_7_2 = V_7_1;
+        } else {
+            float V_0_2 = 1.0f;
+            V_0_1 = V_0_2;
+            V_1_1 = V_1;
+            V_2_1 = V_2;
+            V_3_1 = V_3;
+            V_4_1 = V_4;
+            V_5_1 = V_5;
+            V_6_1 = V_6;
+            V_7_2 = V_7;
+        }
+        return V_0_1;
+    }
+    
+    extern &quot;C&quot; __global__ void il_CorrelationCell_kernel(const float* __restrict__ p_dot, const float* __restrict__ p_rowSum, const float* __restrict__ p_rowSumSq, int p_rows, int p_cols, float* __restrict__ il_out, int il_nRows, int il_nCols) {
+        int p_i = blockIdx.y * blockDim.y + threadIdx.y;
+        int p_j = blockIdx.x * blockDim.x + threadIdx.x;
+        if (p_i &gt;= il_nRows || p_j &gt;= il_nCols) return;
+        il_out[p_i * il_nCols + p_j] = il_CorrelationCell_scalar(p_dot, p_rowSum, p_rowSumSq, p_rows, p_cols, p_i, p_j);
+    }
+    
+
+  解释求值自检: 原方法=0, AST=0, 差=0.000E+000  <span class="t-ok">OK</span>
+
+<span class="t-sub">  ---- DistanceCell ----</span>
+  索引模式  : Grid2D
+<span class="t-hl">  设备函数  : il_DistanceCell_scalar</span>
+  内核      : il_DistanceCell_kernel
+
+  还原出的伪代码:
+    Shared Function DistanceCell(p_dot As Single(), p_rowSumSq As Single(), p_rows As Integer, p_i As Integer, p_j As Integer) As Single
+        Dim V_0 As Single = 0F
+        Dim V_1 As Single = 0F
+        Dim V_0_1 As Single
+        Dim V_1_1 As Single
+        If (p_i &lt;&gt; p_j) Then
+            Dim V_1_2 As Single = p_dot[((p_i * p_rows) + p_j)]
+            Dim V_0_3 As Single = System.MathF.Sqrt(System.MathF.Max(((p_rowSumSq[p_i] + p_rowSumSq[p_j]) - (2F * V_1_2)), 0F))
+            V_0_1 = V_0_3
+            V_1_1 = V_1_2
+        Else
+            Dim V_0_2 As Single = 0F
+            V_0_1 = V_0_2
+            V_1_1 = V_1
+        End If
+        Return V_0_1
+    End Function
+    
+
+  生成的 CUDA 源码:
+    // ===== 本文件由 IL -&gt; AST -&gt; CUDA 流水线自动生成，请勿手工编辑 =====
+    // 来源方法 : DistanceCell
+    // 设备函数 : il_DistanceCell_scalar
+    // 内核     : il_DistanceCell_kernel（索引模式 Grid2D）
+    
+    __device__ float il_DistanceCell_scalar(const float* __restrict__ p_dot, const float* __restrict__ p_rowSumSq, int p_rows, int p_i, int p_j) {
+        float V_0 = 0.0f;
+        float V_1 = 0.0f;
+        float V_0_1;
+        float V_1_1;
+        if (p_i != p_j) {
+            float V_1_2 = p_dot[(p_i * p_rows) + p_j];
+            float V_0_3 = sqrtf(fmaxf((p_rowSumSq[p_i] + p_rowSumSq[p_j]) - (2.0f * V_1_2), 0.0f));
+            V_0_1 = V_0_3;
+            V_1_1 = V_1_2;
+        } else {
+            float V_0_2 = 0.0f;
+            V_0_1 = V_0_2;
+            V_1_1 = V_1;
+        }
+        return V_0_1;
+    }
+    
+    extern &quot;C&quot; __global__ void il_DistanceCell_kernel(const float* __restrict__ p_dot, const float* __restrict__ p_rowSumSq, int p_rows, float* __restrict__ il_out, int il_nRows, int il_nCols) {
+        int p_i = blockIdx.y * blockDim.y + threadIdx.y;
+        int p_j = blockIdx.x * blockDim.x + threadIdx.x;
+        if (p_i &gt;= il_nRows || p_j &gt;= il_nCols) return;
+        il_out[p_i * il_nCols + p_j] = il_DistanceCell_scalar(p_dot, p_rowSumSq, p_rows, p_i, p_j);
+    }
+    
+
+  解释求值自检: 原方法=0.70710677, AST=0.70710677, 差=0.000E+000  <span class="t-ok">OK</span>
+
+<span class="t-sub">  ---- PearsonClamp ----</span>
+  索引模式  : Grid1D
+<span class="t-hl">  设备函数  : il_PearsonClamp_scalar</span>
+  内核      : il_PearsonClamp_kernel
+
+  还原出的伪代码:
+    Shared Function PearsonClamp(p_cov As Single, p_denom As Single) As Single
+        Dim V_0 As Single = 0F
+        Dim V_0_1 As Single
+        If (p_denom &lt;= 1E-12F) Then
+            Dim V_0_3 As Single = 0F
+            V_0_1 = V_0_3
+        Else
+            Dim V_0_2 As Single = (p_cov / p_denom)
+            V_0_1 = V_0_2
+        End If
+        Return System.MathF.Min(1F, System.MathF.Max(-1F, V_0_1))
+    End Function
+    
+
+  生成的 CUDA 源码:
+    // ===== 本文件由 IL -&gt; AST -&gt; CUDA 流水线自动生成，请勿手工编辑 =====
+    // 来源方法 : PearsonClamp
+    // 设备函数 : il_PearsonClamp_scalar
+    // 内核     : il_PearsonClamp_kernel（索引模式 Grid1D）
+    
+    __device__ float il_PearsonClamp_scalar(float p_cov, float p_denom) {
+        float V_0 = 0.0f;
+        float V_0_1;
+        if (p_denom &lt;= 1E-12f) {
+            float V_0_3 = 0.0f;
+            V_0_1 = V_0_3;
+        } else {
+            float V_0_2 = p_cov / p_denom;
+            V_0_1 = V_0_2;
+        }
+        return fminf(1.0f, fmaxf(-1.0f, V_0_1));
+    }
+    
+    extern &quot;C&quot; __global__ void il_PearsonClamp_kernel(const float* __restrict__ p_cov, const float* __restrict__ p_denom, float* __restrict__ il_out, int il_n) {
+        int il_i = blockIdx.x * blockDim.x + threadIdx.x;
+        if (il_i &gt;= il_n) return;
+        il_out[il_i] = il_PearsonClamp_scalar(p_cov[il_i], p_denom[il_i]);
+    }
+    
+
+  解释求值自检: 原方法=1, AST=1, 差=0.000E+000  <span class="t-ok">OK</span>
+
+<span class="t-rule">==========================================================================</span>
+<span class="t-title">  第 2 步: 注册内核源码(必须在创建引擎之前)</span>
+<span class="t-rule">==========================================================================</span>
+<span class="t-hl">  已注册 il_RowSum_kernel [Grid1D] &lt;- PearsonMetrics.RowSum</span>
+<span class="t-hl">  已注册 il_RowSumSq_kernel [Grid1D] &lt;- PearsonMetrics.RowSumSq</span>
+<span class="t-hl">  已注册 il_GramDot_kernel [Grid2D] &lt;- PearsonMetrics.GramDot</span>
+<span class="t-hl">  已注册 il_CorrelationCell_kernel [Grid2D] &lt;- PearsonMetrics.CorrelationCell</span>
+<span class="t-hl">  已注册 il_DistanceCell_kernel [Grid2D] &lt;- PearsonMetrics.DistanceCell</span>
+<span class="t-hl">  已注册 il_PearsonClamp_kernel [Grid1D] &lt;- PearsonMetrics.PearsonClamp</span>
+
+<span class="t-rule">==========================================================================</span>
+<span class="t-title">  第 3 步: 在 GPU 上计算相关矩阵与距离矩阵</span>
+<span class="t-rule">==========================================================================</span>
+<span class="t-hl">  设备      : NVIDIA RTX A4000</span>
+<span class="t-hl">  内核镜像  : NVRTC 13.3 (cubin) arch=sm_86 [C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v13.3\bin\x64\nvrtc64_130_0.dll]</span>
+
+  PearsonClamp(逐元素自动包裹) 最大绝对误差 = 0.000E+000  <span class="t-ok">OK</span>
+
+<span class="t-rule">==========================================================================</span>
+<span class="t-title">  第 4 步: CPU 参考实现比对 + 结果预览</span>
+<span class="t-rule">==========================================================================</span>
+  皮尔逊相关矩阵 最大绝对误差 = 2.221E-007  <span class="t-ok">OK</span>
+  欧氏距离矩阵   最大绝对误差 = 2.069E-005  <span class="t-ok">OK</span>
+
+  皮尔逊相关矩阵(GPU, 左上 6 x 6):
+        1.0000   -0.0151   -0.0096   -0.0299   -0.0083    0.0006
+       -0.0151    1.0000   -0.0564   -0.0311   -0.0131   -0.0156
+       -0.0096   -0.0564    1.0000    0.0206   -0.0392   -0.0140
+       -0.0299   -0.0311    0.0206    1.0000    0.0250   -0.0570
+       -0.0083   -0.0131   -0.0392    0.0250    1.0000   -0.0185
+        0.0006   -0.0156   -0.0140   -0.0570   -0.0185    1.0000
+
+  欧氏距离矩阵(GPU, 左上 6 x 6):
+        0.0000   26.8603   26.5958   26.5702   26.4389   26.4184
+       26.8603    0.0000   27.1844   26.5662   26.4858   26.5902
+       26.5958   27.1844    0.0000   25.6775   26.5984   26.3983
+       26.5702   26.5662   25.6775    0.0000   25.4752   26.6538
+       26.4389   26.4858   26.5984   25.4752    0.0000   26.3193
+       26.4184   26.5902   26.3983   26.6538   26.3193    0.0000
+
+教程全部步骤通过。</div>
+  </div>
+  <p class="note" style="margin-top:18px">The run finishes with
+  <b>correlation error 2.221E-007</b> and <b>distance error 2.069E-005</b> against the
+  double-precision CPU reference — pure single-precision GPU round-off, four to five
+  orders of magnitude below the verification thresholds.</p>
+</section>
+
+<div class="pager">
+  <a href="demo-kmeans.html"><b>← K-means + PCA</b>Tutorial 01</a>
+  <a class="nx" href="./"><b>scibasic.net →</b>Back to home</a>
+</div>
+
+</main>
+<div class="foot">sciBASIC# — a scientific computing stack in one language · <a href="./">scibasic.net</a> · GNU GPLv3</div>
+</body>
+</html>

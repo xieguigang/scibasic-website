@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="dark" />
+<meta name="description" content="sciBASIC# — a VisualBasic language kernel and runtime for scientific data computing, machine learning and visualization on modern .NET. scibasic.net" />
+<title>sciBASIC# — VisualBasic for Scientific Computing</title>
+<link rel="icon" type="image/png" href="assets/img/logo-knot.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css" />
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+  }
+}
+</script>
+</head>
+<body>
+
+<div id="boot">
+  <img src="assets/img/logo-knot.png" alt="sciBASIC# knot logo" />
+  <span>sciBASIC#</span>
+</div>
+
+<!-- ================= global top bar ================= -->
+<header class="topbar">
+  <a class="brand" href="./">
+    <img src="assets/img/logo-knot.png" alt="" />
+    <strong>sciBASIC#</strong>
+  </a>
+  <nav class="topnav">
+    <a href="https://github.com/xieguigang/sciBASIC" target="_blank" rel="noopener">Library—</a>
+    <a href="demo-kmeans.html">Tutorials—</a>
+    <a href="https://github.com/xieguigang/sciBASIC/tree/master/docs" target="_blank" rel="noopener">Docs</a>
+  </nav>
+  <button class="menu-btn" id="menuBtn" aria-label="Menu"><span></span><span></span></button>
+</header>
+
+<!-- ================= menu overlay ================= -->
+<div class="menu-overlay" id="menuOverlay">
+  <nav>
+    <a class="big" href="https://github.com/xieguigang/sciBASIC" target="_blank" rel="noopener">The <em>Library</em></a>
+    <a class="big" href="https://github.com/xieguigang/sciBASIC/tree/master/docs" target="_blank" rel="noopener">Module <em>Guides</em></a>
+    <a class="big" href="https://github.com/xieguigang/sciBASIC/tree/master/tutorials" target="_blank" rel="noopener">Tutorials</a>
+    <a class="big" href="mailto:xie.guigang@live.com">Contact</a>
+    <div class="menu-foot">sciBASIC# · GNU GPLv3 · scibasic.net</div>
+  </nav>
+</div>
+
+<div id="viewport">
+
+  <!-- ============ SCREEN 01 · particle wave ============ -->
+  <section class="screen is-active" id="s1">
+    <canvas id="waveCanvas"></canvas>
+
+    <div class="hero">
+      <div class="slides reveal d1">
+        <div class="slide active">
+          <h1>A VisualBasic language kernel for scientific computing — <span class="u">numerics</span>, <span class="u">statistics</span> and <span class="u">machine learning</span> on modern .NET.</h1>
+          <a class="cta" href="https://github.com/xieguigang/sciBASIC" target="_blank" rel="noopener">Explore the Library—</a>
+        </div>
+        <div class="slide">
+          <h1>From <span class="u">DataFrame</span> and <span class="u">NetCDF</span> I/O to <span class="u">ODE solvers</span> and publication-quality graphics — one cohesive, cross-platform framework.</h1>
+          <a class="cta" href="https://github.com/xieguigang/sciBASIC/tree/master/docs" target="_blank" rel="noopener">View the Modules—</a>
+        </div>
+        <div class="slide">
+          <h1>CLI-first by design — headless, scriptable and <span class="u">reproducible</span> data-science programs that read files, compute, and emit figures.</h1>
+          <a class="cta" href="https://github.com/xieguigang/sciBASIC/tree/master/tutorials" target="_blank" rel="noopener">Get Started—</a>
+        </div>
+      </div>
+      <div class="dots reveal d2" id="heroDots"><i class="on"></i><i></i><i></i></div>
+    </div>
+
+    <div class="foot">
+      <div class="row1 reveal d2">
+        <span class="idx" data-index>01</span>
+        <span class="hint">Scroll — drag to orbit the field</span>
+        <span class="ver">net10.0</span>
+      </div>
+      <div class="row2 reveal d3">
+        <p class="blurb">sciBASIC# turns VisualBasic into a productive environment for headless, reproducible data-science programs — tabular data, scientific file I/O, mathematics, machine learning and the <span class="u">Graphics Artist</span> plotting engine. Applications across scientific infrastructure.</p>
+        <div class="caps">Scientific Computing<br />Visual Basic · .NET 10</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SCREEN 02 · penrose knot ============ -->
+  <section class="screen" id="s2">
+    <canvas id="knotCanvas"></canvas>
+
+    <div class="hero">
+      <div class="slides reveal d1" style="min-height:6.4em;">
+        <div class="slide active">
+          <h1>Drawn by its own <span class="u">IsometricEngine</span> — the sciBASIC# mark is an <span class="u">impossible knot</span>, rendered by the same 3-D graphics engine that ships inside the library.</h1>
+          <a class="cta" href="https://github.com/xieguigang/sciBASIC" target="_blank" rel="noopener">Browse the Source—</a>
+        </div>
+      </div>
+      <div class="feats reveal d2">
+        <div><b>Numerics &amp; ODEs</b><span>Linear algebra, curve fitting, differential equation solvers and signal processing.</span></div>
+        <div><b>ML &amp; Data Mining</b><span>Clustering, PCA, decision trees and neural networks on tabular data.</span></div>
+        <div><b>Graphics Artist</b><span>Publication-quality scientific plotting built on a GDI+ vector engine.</span></div>
+      </div>
+      <div class="kpanel reveal d3">
+        <button id="kBtnLock" class="active">Illusion Lock</button>
+        <button id="kBtnFront">Front View</button>
+        <button id="kBtnSpin">Auto Spin</button>
+      </div>
+    </div>
+
+    <div class="foot">
+      <div class="row1 reveal d2">
+        <span class="idx" data-index>02</span>
+        <span class="hint">Drag to orbit — it always faces you closed · Double-click: front view</span>
+        <span class="ver">scibasic.net</span>
+      </div>
+      <div class="row2 reveal d3">
+        <p class="blurb">The Penrose triangle — an object that cannot exist — sits at the heart of sciBASIC#: a full scientific stack, <span class="u">implemented from first principles</span> in one language, and given away under the GNU GPLv3.</p>
+        <div class="caps">
+          Penrose Triangle<br />Drawn by Isometric Engine
+          <a class="tut" href="demo-kmeans.html">Tutorial 01 — K-means + PCA →</a>
+          <a class="tut" href="demo-cuda.html">Tutorial 02 — IL → CUDA →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+  /* boot overlay guard */
+  (function () {
+    var boot = document.getElementById('boot');
+    var span = boot.querySelector('span');
+    var tries = 0;
+    var iv = setInterval(function () {
+      tries++;
+      if (window.__siteReady) { clearInterval(iv); return; }
+      if (tries > 40) {
+        clearInterval(iv);
+        span.textContent = 'THREE.JS FAILED TO LOAD — CHECK NETWORK & REFRESH';
+        span.style.color = '#ff7a6e';
+      }
+    }, 200);
+  })();
+</script>
+<script type="module" src="assets/js/main.js"></script>
+</body>
+</html>
