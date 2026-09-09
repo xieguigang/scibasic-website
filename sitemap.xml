@@ -4,23 +4,41 @@
   <url>
     <loc>https://scibasic.net/index.html</loc>
     <lastmod>2026-09-09</lastmod>
-    <changefreq>hourly</changefreq>
+    <changefreq>daily</changefreq>
     <priority>1.00</priority>
   </url>
   <url>
     <loc>https://scibasic.net/demo-kmeans.html</loc>
     <lastmod>2026-09-09</lastmod>
     <changefreq>weekly</changefreq>
+    <priority>0.98</priority>
+  </url>
+  <url>
+    <loc>https://scibasic.net/demo-mnist.html</loc>
+    <lastmod>2026-09-09</lastmod>
+    <changefreq>daily</changefreq>
     <priority>0.94</priority>
   </url>
   <url>
     <loc>https://scibasic.net/demo-cuda.html</loc>
     <lastmod>2026-09-09</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.91</priority>
+    <priority>0.90</priority>
   </url>
   <url>
-    <loc>https://scibasic.net/demo-mnist.html</loc>
+    <loc>https://scibasic.net/demo-hola.html</loc>
+    <lastmod>2026-09-09</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.89</priority>
+  </url>
+  <url>
+    <loc>https://scibasic.net/demo-tfidf.html</loc>
+    <lastmod>2026-09-09</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.89</priority>
+  </url>
+  <url>
+    <loc>https://scibasic.net/demo-word2vec.html</loc>
     <lastmod>2026-09-09</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.86</priority>

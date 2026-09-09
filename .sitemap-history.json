@@ -5,6 +5,12 @@
       1788917444
     ]
   },
+  "https://scibasic.net/demo-hola.html": {
+    "md5": "a2744632dd8b9d8173ccebd4b35da6e3",
+    "timestamp": [
+      1788950461
+    ]
+  },
   "https://scibasic.net/demo-kmeans.html": {
     "md5": "2102156bf68b30c5a7e1dbce19cdf8fd",
     "timestamp": [
@@ -12,16 +18,30 @@
     ]
   },
   "https://scibasic.net/demo-mnist.html": {
-    "md5": "983c1a3a8f7b304033535f2497728d10",
+    "md5": "b56a96789406371cd04d72df3b44a70e",
     "timestamp": [
-      1788917444
+      1788917444,
+      1788950461
+    ]
+  },
+  "https://scibasic.net/demo-tfidf.html": {
+    "md5": "91cbce4227db5da4f044e931931109b6",
+    "timestamp": [
+      1788950461
+    ]
+  },
+  "https://scibasic.net/demo-word2vec.html": {
+    "md5": "4c631087f47ec60e0713d3f49a4dafc3",
+    "timestamp": [
+      1788950461
     ]
   },
   "https://scibasic.net/index.html": {
-    "md5": "0ea104df2c5fac237a9be54134d9b4c3",
+    "md5": "1537cc37ea50a51e60200ce5c94fefe4",
     "timestamp": [
       1788916632,
-      1788917444
+      1788917444,
+      1788950461
     ]
   }
 }
