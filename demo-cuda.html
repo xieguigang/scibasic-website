@@ -1,0 +1,1558 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="description" content="Decompile plain VB.NET math functions into CUDA kernels at runtime with sciBASIC# ILCuda: IL to AST to .cu, NVRTC JIT, GPU execution and CPU cross-validation &mdash; full script and console log." />
+  <title>Tutorial 02 &mdash; IL &#8594; CUDA GPU acceleration &middot; sciBASIC#</title>
+  <link rel="icon" type="image/png" href="favicon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #030303;
+      --ink: #f2f2f2;
+      --ink-dim: #9a9a9a;
+      --ink-faint: #6b6b6b;
+      --ink-ghost: #4a4a4a;
+      --hairline: rgba(255, 255, 255, .16);
+      --hairline2: rgba(255, 255, 255, .08);
+      --green: #3fae4a;
+      --warn: #ff7a6e;
+      --sans: 'Inter', 'Helvetica Neue', 'Segoe UI', system-ui, sans-serif;
+      --mono: ui-monospace, 'Cascadia Code', 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html { background: var(--bg); }
+
+    body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--sans);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      line-height: 1.6;
+    }
+
+    ::selection { background: rgba(63, 174, 74, .25); }
+
+    a { color: inherit; }
+
+    /* ---------- top bar (same skeleton as index.html) ---------- */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 60;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 3.4vw;
+      background: rgba(3, 3, 3, .84);
+      -webkit-backdrop-filter: blur(16px);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--hairline2);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      text-decoration: none;
+      font-size: 14.5px;
+      font-weight: 600;
+      letter-spacing: .01em;
+      color: var(--ink);
+    }
+
+    .brand img { width: 25px; height: 25px; display: block; }
+
+    .topnav {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 44px;
+    }
+
+    .topnav a {
+      font-size: 13px;
+      color: var(--ink-dim);
+      text-decoration: none;
+      letter-spacing: .02em;
+      transition: color .25s;
+    }
+
+    .topnav a:hover, .topnav a.on { color: var(--ink); }
+
+    .home-btn {
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      border: 1px solid var(--hairline);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--ink-dim);
+      text-decoration: none;
+      font-size: 16px;
+      line-height: 1;
+      transition: color .25s, border-color .25s, transform .25s;
+    }
+
+    .home-btn:hover { color: var(--ink); border-color: rgba(255, 255, 255, .5); }
+
+    @media (max-width: 900px) { .topnav { display: none; } }
+
+    /* ---------- document shell ---------- */
+    .wrap { width: min(1060px, 92vw); margin: 0 auto; padding: 76px 0 30px; }
+
+    .eyebrow {
+      display: flex;
+      gap: 14px;
+      align-items: baseline;
+      font-size: 10px;
+      letter-spacing: .32em;
+      text-transform: uppercase;
+      color: var(--ink-ghost);
+    }
+
+    .eyebrow b { color: var(--green); font-weight: 500; }
+
+    h1.headline {
+      font-size: clamp(26px, 3.4vw, 42px);
+      font-weight: 400;
+      line-height: 1.35;
+      letter-spacing: -.012em;
+      margin: 24px 0 26px;
+      max-width: 22em;
+    }
+
+    h1.headline .u { border-bottom: 1px solid rgba(255, 255, 255, .85); padding-bottom: 1px; }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 30px;
+      font-size: 10.5px;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      border-top: 1px solid var(--hairline2);
+      border-bottom: 1px solid var(--hairline2);
+      padding: 14px 0;
+    }
+
+    .meta b { color: var(--ink-dim); font-weight: 500; }
+
+    .lede {
+      max-width: 66em;
+      color: var(--ink-dim);
+      font-size: 15px;
+      line-height: 1.9;
+      margin: 30px 0 0;
+    }
+
+    .lede code, .step code, .note code, figcaption code {
+      font-family: var(--mono);
+      font-size: .86em;
+      background: #101010;
+      border: 1px solid var(--hairline2);
+      padding: 1px 6px;
+      color: var(--ink);
+    }
+
+    /* ---------- sections ---------- */
+    section { margin-top: 72px; }
+
+    .sec-label {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      font-size: 10px;
+      letter-spacing: .3em;
+      text-transform: uppercase;
+      color: var(--ink-ghost);
+    }
+
+    .sec-label::after { content: ''; flex: 1; height: 1px; background: var(--hairline2); }
+
+    .sec-label b { color: var(--green); font-weight: 500; }
+
+    h2 {
+      font-size: clamp(20px, 2.2vw, 28px);
+      font-weight: 400;
+      letter-spacing: -.01em;
+      margin: 18px 0 10px;
+    }
+
+    .sub { color: var(--ink-faint); font-size: 13.5px; line-height: 1.8; max-width: 62em; }
+
+    /* ---------- pipeline steps ---------- */
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(185px, 1fr));
+      gap: 30px 26px;
+      margin-top: 30px;
+    }
+
+    .step { border-top: 1px solid var(--hairline); padding-top: 14px; }
+
+    .step .no { font-size: 10px; letter-spacing: .3em; color: var(--green); }
+
+    .step h3 { font-size: 13.5px; font-weight: 500; letter-spacing: .03em; margin: 10px 0 7px; }
+
+    .step p { font-size: 11.5px; line-height: 1.75; color: var(--ink-faint); }
+
+    /* ---------- code box ---------- */
+    .codebox { margin-top: 24px; border: 1px solid var(--hairline2); background: #0a0a0a; }
+
+    .codebox-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+      padding: 11px 18px;
+      border-bottom: 1px solid var(--hairline2);
+      font-size: 10px;
+      letter-spacing: .22em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+    }
+
+    .codebox-head a {
+      color: var(--ink-dim);
+      text-decoration: none;
+      border-bottom: 1px solid var(--hairline);
+      padding-bottom: 2px;
+      transition: color .25s, border-color .25s;
+    }
+
+    .codebox-head a:hover { color: var(--ink); border-color: rgba(255, 255, 255, .5); }
+
+    pre.code {
+      margin: 0;
+      padding: 20px 22px;
+      overflow: auto;
+      font-family: var(--mono);
+      font-size: 12.5px;
+      line-height: 1.72;
+      color: #c9c9c9;
+      tab-size: 4;
+    }
+
+    pre.code.tall { max-height: 640px; }
+
+    .tk-c { color: var(--ink-faint); font-style: italic; }
+    .tk-k { color: var(--green); }
+    .tk-s { color: #d8e6d8; }
+    .tk-p { color: var(--ink-dim); }
+    .tk-n { color: #8fae96; }
+
+    /* ---------- figures ---------- */
+    figure.fig { margin-top: 26px; border: 1px solid var(--hairline2); background: #0a0a0a; padding: 20px; }
+
+    .fig img { width: auto; max-width: 100%; height: auto; display: block; margin: 0 auto; }
+
+    figcaption { margin-top: 16px; font-size: 12px; line-height: 1.85; color: var(--ink-faint); }
+
+    figcaption b { color: var(--ink-dim); font-weight: 500; }
+
+    /* ---------- callout ---------- */
+    .note {
+      margin-top: 28px;
+      border-left: 2px solid var(--green);
+      padding: 4px 0 4px 22px;
+      color: var(--ink-dim);
+      font-size: 13.5px;
+      line-height: 1.9;
+      max-width: 62em;
+    }
+
+    .note b { color: var(--ink); font-weight: 500; }
+
+    /* ---------- tables ---------- */
+    .tablewrap { margin-top: 24px; border: 1px solid var(--hairline2); background: #0a0a0a; overflow-x: auto; }
+
+    table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 12px; }
+
+    th {
+      font-family: var(--sans);
+      font-size: 10px;
+      letter-spacing: .22em;
+      text-transform: uppercase;
+      color: var(--ink-ghost);
+      font-weight: 500;
+      text-align: left;
+      padding: 11px 16px;
+      border-bottom: 1px solid var(--hairline);
+      white-space: nowrap;
+    }
+
+    td { padding: 9px 16px; border-bottom: 1px solid var(--hairline2); color: var(--ink-dim); white-space: nowrap; }
+
+    td.num { text-align: right; }
+
+    tbody tr:last-child td { border-bottom: none; }
+
+    tbody tr:hover td { background: #0d0d0d; }
+
+    tr.ell td { color: var(--ink-ghost); text-align: center; letter-spacing: .5em; font-size: 10px; }
+
+    /* ---------- terminal ---------- */
+    pre.term {
+      margin: 0;
+      padding: 20px 22px;
+      overflow: auto;
+      max-height: 580px;
+      font-family: var(--mono);
+      font-size: 12.5px;
+      line-height: 1.72;
+      color: #b9b9b9;
+      white-space: pre;
+    }
+
+    .term .sep { color: var(--ink-ghost); }
+    .term .ok { color: var(--green); }
+    .term .fail { color: var(--warn); }
+    .term .em { color: var(--ink); }
+
+    /* ---------- downloads ---------- */
+    .dlrow { display: flex; flex-wrap: wrap; gap: 16px 38px; margin-top: 28px; }
+
+    a.dl {
+      font-size: 13px;
+      color: var(--ink-dim);
+      text-decoration: none;
+      letter-spacing: .02em;
+      border-bottom: 1px solid var(--hairline);
+      padding-bottom: 5px;
+      transition: color .25s, border-color .25s;
+    }
+
+    a.dl:hover { color: var(--ink); border-color: rgba(255, 255, 255, .6); }
+
+    a.dl::after { content: '\2192'; margin-left: 2px; opacity: 0; transition: opacity .25s, margin-left .25s; }
+
+    a.dl:hover::after { opacity: 1; margin-left: 8px; }
+
+    /* ---------- footer ---------- */
+    footer.site {
+      margin-top: 110px;
+      border-top: 1px solid var(--hairline2);
+      padding: 34px 3.4vw 52px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 28px;
+      flex-wrap: wrap;
+    }
+
+    .pn { display: flex; gap: 44px; flex-wrap: wrap; }
+
+    .pn a { text-decoration: none; color: var(--ink-dim); font-size: 13.5px; border-bottom: 1px solid var(--hairline); padding-bottom: 5px; transition: color .25s, border-color .25s; }
+
+    .pn a:hover { color: var(--ink); border-color: rgba(255, 255, 255, .6); }
+
+    .pn a span { display: block; font-size: 10px; letter-spacing: .3em; text-transform: uppercase; color: var(--ink-ghost); margin-bottom: 8px; }
+
+    .legal { font-size: 11px; letter-spacing: .12em; color: var(--ink-ghost); }
+</style>
+</head>
+
+<body>
+  <!-- ================= global top bar ================= -->
+  <header class="topbar">
+    <a class="brand" href="./">
+      <img src="favicon.png" alt="sciBASIC# knot logo" />
+      <strong>sciBASIC#</strong>
+    </a>
+    <nav class="topnav">
+      <a href="https://github.com/xieguigang/sciBASIC" target="_blank" rel="noopener">Library&mdash;</a>
+      <a href="demo-kmeans.html" class="on">Tutorials&mdash;</a>
+      <a href="https://github.com/xieguigang/sciBASIC/tree/master/docs" target="_blank" rel="noopener">Docs</a>
+    </nav>
+    <a class="home-btn" href="./" aria-label="Back to home" title="Back to home">&#8598;</a>
+  </header>
+
+  <main class="wrap">
+    <!-- ================= page head ================= -->
+    <p class="eyebrow"><b>02</b> <span>Tutorial &mdash; IL &#8594; CUDA</span></p>
+    <h1 class="headline">Write <span class="u">plain VB.NET math</span> &mdash; the runtime decompiles it to <span class="u">CUDA C</span> and launches it on the GPU.</h1>
+    <div class="meta">
+      <span>Module <b>Computing &middot; ILCuda</b></span>
+      <span>Pipeline <b>IL &#8594; AST &#8594; .cu &#8594; NVRTC</b></span>
+      <span>Matrix <b>1024 &times; 1024 &middot; seed 42</b></span>
+      <span>Device <b>RTX A4000 &middot; sm_86</b></span>
+    </div>
+    <p class="lede">No CUDA source, no <code>nvcc</code> project files. Six ordinary <code>Shared</code> functions &mdash; row sums, row square-sums, a Gram dot product, a Pearson-correlation cell, a Euclidean-distance cell and a scalar clamp &mdash; are reflected from the running script, lifted into an AST, re-emitted as <code>.cu</code>, compiled on the fly by NVRTC and launched against a 1024&nbsp;&times;&nbsp;1024 single-precision matrix on an NVIDIA RTX&nbsp;A4000. Every stage cross-checks itself: interpreted AST against the original method, GPU results against double-precision CPU references.</p>
+
+
+    <section id="pipeline">
+      <p class="sec-label"><b>02</b> <span>Pipeline</span></p>
+      <h2>Four steps from IL bytecode to a GPU result</h2>
+      <div class="steps">
+        <div class="step"><div class="no">Step 1</div><h3>Translate</h3>
+          <p><code>IlCudaTranslator.Translate</code> reflects each VB function, decompiles the IL into a
+          <code>MethodSyntax</code> AST and emits device + kernel <code>.cu</code> code; a CPU interpreter
+          re-evaluates the same AST as a self-check.</p></div>
+        <div class="step"><div class="no">Step 2</div><h3>Register</h3>
+          <p><code>kernel.Register()</code> hands every generated source to <code>KernelSources</code> &mdash;
+          before the engine is created.</p></div>
+        <div class="step"><div class="no">Step 3</div><h3>Launch</h3>
+          <p><code>CudaEngine.TryCreate</code> JIT-compiles via NVRTC (cubin, <code>sm_86</code>) and launches:
+          1-D kernels for row statistics, 16&nbsp;&times;&nbsp;16 2-D grids for the 1024&nbsp;&times;&nbsp;1024
+          Gram / correlation / distance matrices.</p></div>
+        <div class="step"><div class="no">Step 4</div><h3>Verify</h3>
+          <p>GPU matrices are compared element-wise against double-precision CPU references &mdash; max
+          |error| <code>2.2e-7</code> (Pearson) and <code>2.1e-5</code> (distance). Every check prints
+          <code>OK</code>.</p></div>
+      </div>
+    </section>
+
+    <div class="note">The pipeline maps VB functions onto kernels through <b>three conventions</b>, taken verbatim
+      from the script header: &nbsp;&#9312; a parameter named <b><code>i</code></b> &rarr; 1-D kernel,
+      <code>i = blockIdx.x &middot; blockDim.x + threadIdx.x</code>; &nbsp;&#9313; parameters <b><code>i</code> and
+      <code>j</code></b> &rarr; 2-D kernel, <code>i</code> on rows (<code>blockIdx.y</code>), <code>j</code> on
+      columns (<code>blockIdx.x</code>); &nbsp;&#9314; pure scalars with no array indexing &rarr; auto-wrapped as an
+      <b>element-wise</b> kernel over per-index arrays.</div>
+    <section id="script">
+      <p class="sec-label"><b>01</b> <span>The Script</span></p>
+      <h2>Full demo source</h2>
+      <p class="sub">The complete script exactly as executed by the sciBASIC# script engine (<code>vbs.exe</code>) &mdash; nothing elided.</p>
+      <div class="codebox">
+        <div class="codebox-head"><span>cuda.vb &middot; 572 lines</span><a href="assets/cuda.vb" download>Download cuda.vb</a></div>
+        <pre class="code tall" data-lang="vb"><code>#include &quot;Microsoft.VisualBasic.Computing.ILCuda.dll&quot;
+#include &quot;Microsoft.VisualBasic.ApplicationServices.Development.VisualStudio.dll&quot;
+
+imports System.Reflection
+imports System.Text
+imports System.Text.RegularExpressions
+imports Microsoft.VisualBasic.Computing.ILCuda.Runtime
+imports Microsoft.VisualBasic.Computing.ILCuda.IL2Cuda
+imports Microsoft.VisualBasic.ApplicationServices.Development.VisualStudio.IL
+
+&#x27; ============================================================================
+&#x27;  IL -&gt; CUDA 教程: 用脚本里定义的 VB.NET 数学函数, 在 GPU 上算矩阵行间的
+&#x27;  皮尔逊相关系数矩阵 与 欧氏距离矩阵
+&#x27;
+&#x27;  运行:
+&#x27;      vbs.exe tutorials\VBS\cuda.vb
+&#x27;
+&#x27;  流水线:
+&#x27;      VB.NET 函数 -&gt; IL 字节码 -&gt; AST(MethodSyntax) -&gt; .cu 源码
+&#x27;                 -&gt; NVRTC 即时编译 -&gt; cuLaunchKernel -&gt; 结果矩阵
+&#x27;
+&#x27;  三条内核映射约定(详见 cuda\ILCuda\README.md):
+&#x27;      1) 形参里有 i        -&gt; 一维内核, i = blockIdx.x * blockDim.x + threadIdx.x
+&#x27;      2) 形参里有 i 和 j   -&gt; 二维内核, i 取行(blockIdx.y), j 取列(blockIdx.x)
+&#x27;      3) 纯标量, 不做数组取元素 -&gt; 逐元素自动包裹, 每个标量参数都变成按下标读取的数组
+&#x27;
+&#x27;  注意: 由于 VBS 引擎会把顶层的 Function 重写为匿名函数, 拿不到 Shared 的
+&#x27;  MethodInfo, 所以待反编译的目标函数一律写进下面的 Public Class 里 —— 类型块
+&#x27;  会被原样搬到生成的 Module 中, 可以正常反射。
+&#x27; ============================================================================
+
+&#x27; ---------------------------------------------------------------------------
+&#x27;  第 1 节: 待反编译的目标函数
+&#x27;
+&#x27;  下面全部是普通的 VB.NET 写法, 不含任何 CUDA 概念。IL2Cuda 会在运行时把它们
+&#x27;  反编译成表达式树, 再发射成 .cu。
+&#x27;
+&#x27;  设第 i 行 sum_i = Σx, sq_i = Σx², dot_ij = Σx_ik·x_jk, n = 列数:
+&#x27;      mean_i  = sum_i / n
+&#x27;      var_i   = sq_i - n * mean_i²
+&#x27;      corr_ij = (dot_ij - n * mean_i * mean_j) / sqrt(var_i * var_j)
+&#x27;      dist_ij = sqrt(sq_i + sq_j - 2 * dot_ij)
+&#x27;
+&#x27;  对角线在数学上恒为 corr=1 / dist=0, 这里直接返回, 避免单精度下两个相近
+&#x27;  大数相减把舍入误差放大(见 README 的数值注意点)。
+&#x27; ---------------------------------------------------------------------------
+
+Public Class PearsonMetrics
+
+    &#x27; 行求和, 对应约定 1: 形参 i 为线程索引 -&gt; 一维内核
+    Public Shared Function RowSum(x As Single(), cols As Integer, i As Integer) As Single
+        Dim sum As Single = 0.0F
+
+        For k As Integer = 0 To cols - 1
+            sum += x(i * cols + k)
+        Next
+
+        Return sum
+    End Function
+
+    &#x27; 行平方和, 同样是一维内核
+    Public Shared Function RowSumSq(x As Single(), cols As Integer, i As Integer) As Single
+        Dim sumSq As Single = 0.0F
+
+        For k As Integer = 0 To cols - 1
+            Dim v As Single = x(i * cols + k)
+            sumSq += v * v
+        Next
+
+        Return sumSq
+    End Function
+
+    &#x27; 两行的点积, 对应约定 2: 同时有 i 和 j -&gt; 二维内核
+    Public Shared Function GramDot(x As Single(), cols As Integer, i As Integer, j As Integer) As Single
+        Dim acc As Single = 0.0F
+
+        For k As Integer = 0 To cols - 1
+            acc += x(i * cols + k) * x(j * cols + k)
+        Next
+
+        Return acc
+    End Function
+
+    &#x27; 皮尔逊相关单元: guard clause + if/else 菱形 + MathF 调用
+    Public Shared Function CorrelationCell(dot As Single(), rowSum As Single(), rowSumSq As Single(),
+                                           rows As Integer, cols As Integer,
+                                           i As Integer, j As Integer) As Single
+        If i = j Then
+            Return 1.0F
+        End If
+
+        Dim n As Single = CSng(cols)
+        Dim meanI As Single = rowSum(i) / n
+        Dim meanJ As Single = rowSum(j) / n
+        Dim varI As Single = rowSumSq(i) - n * meanI * meanI
+        Dim varJ As Single = rowSumSq(j) - n * meanJ * meanJ
+        Dim d As Single = dot(i * rows + j)
+        Dim cov As Single = d - n * meanI * meanJ
+        Dim denom As Single = MathF.Sqrt(MathF.Max(varI, 0.0F)) * MathF.Sqrt(MathF.Max(varJ, 0.0F))
+        Dim c As Single
+
+        If denom &gt; 1.0E-12F Then
+            c = cov / denom
+        Else
+            c = 0.0F
+        End If
+
+        Return MathF.Min(1.0F, MathF.Max(-1.0F, c))
+    End Function
+
+    &#x27; 欧氏距离单元: guard clause + MathF.Sqrt
+    Public Shared Function DistanceCell(dot As Single(), rowSumSq As Single(),
+                                        rows As Integer, i As Integer, j As Integer) As Single
+        If i = j Then
+            Return 0.0F
+        End If
+
+        Dim d As Single = dot(i * rows + j)
+        Dim d2 As Single = MathF.Max(rowSumSq(i) + rowSumSq(j) - 2.0F * d, 0.0F)
+
+        Return MathF.Sqrt(d2)
+    End Function
+
+    &#x27; 纯标量截断, 对应约定 3: 没有 i/j, 也没有数组取元素 -&gt; 逐元素自动包裹
+    Public Shared Function PearsonClamp(cov As Single, denom As Single) As Single
+        Dim c As Single
+
+        If denom &gt; 1.0E-12F Then
+            c = cov / denom
+        Else
+            c = 0.0F
+        End If
+
+        Return MathF.Min(1.0F, MathF.Max(-1.0F, c))
+    End Function
+End Class
+
+&#x27; ---------------------------------------------------------------------------
+&#x27;  第 2 节: 教程用的辅助代码(目标方法清单 / CPU 参考实现 / 排版 / 自检)
+&#x27; ---------------------------------------------------------------------------
+
+Public Class TutorialKit
+
+    &#x27;&#x27;&#x27; 全部待反编译的目标方法
+    Public Shared Function Targets() As MethodInfo()
+        Dim t As Type = GetType(PearsonMetrics)
+
+        Return New MethodInfo() {
+            t.GetMethod(&quot;RowSum&quot;),
+            t.GetMethod(&quot;RowSumSq&quot;),
+            t.GetMethod(&quot;GramDot&quot;),
+            t.GetMethod(&quot;CorrelationCell&quot;),
+            t.GetMethod(&quot;DistanceCell&quot;),
+            t.GetMethod(&quot;PearsonClamp&quot;)
+        }
+    End Function
+
+    &#x27;&#x27;&#x27; 造一个可复现的随机矩阵(行主序)
+    Public Shared Function MakeMatrix(rows As Integer, cols As Integer, seed As Integer) As Single()
+        Dim rnd As New Random(seed)
+        Dim data(rows * cols - 1) As Single
+
+        For i As Integer = 0 To data.Length - 1
+            data(i) = CSng(rnd.NextDouble() * 2.0 - 1.0)
+        Next
+
+        Return data
+    End Function
+
+    &#x27;&#x27;&#x27; 为解释求值自检造一组下标合法、数值不退化的样例参数
+    Public Shared Function SampleArgs(m As MethodInfo) As Object()
+        Dim ps As ParameterInfo() = m.GetParameters()
+        Dim args(ps.Length - 1) As Object
+
+        For i As Integer = 0 To ps.Length - 1
+            Dim p As ParameterInfo = ps(i)
+            Dim lower As String = p.Name.ToLowerInvariant()
+
+            If p.ParameterType.IsArray Then
+                Dim data(255) As Single
+
+                For k As Integer = 0 To 255
+                    data(k) = CSng((k Mod 17) - 8) * 0.5F
+                Next
+
+                args(i) = data
+            ElseIf p.ParameterType = GetType(Single) Then
+                args(i) = 1.5F
+            ElseIf p.ParameterType = GetType(Integer) Then
+                Select Case lower
+                    Case &quot;cols&quot; : args(i) = 8
+                    Case &quot;rows&quot; : args(i) = 16
+                    Case &quot;i&quot; : args(i) = 2
+                    Case &quot;j&quot; : args(i) = 5
+                    Case Else : args(i) = 3
+                End Select
+            End If
+        Next
+
+        Return args
+    End Function
+
+    &#x27;&#x27;&#x27; CPU 参考实现: 皮尔逊相关矩阵(双精度两遍算法)
+    Public Shared Function CpuCorrelation(data As Single(), rows As Integer, cols As Integer) As Double()
+        Dim n As Double = cols
+        Dim mean(rows - 1) As Double
+        Dim sd(rows - 1) As Double
+
+        For i As Integer = 0 To rows - 1
+            Dim s As Double = 0
+            Dim sq As Double = 0
+
+            For k As Integer = 0 To cols - 1
+                Dim v As Double = data(i * cols + k)
+                s += v
+                sq += v * v
+            Next
+
+            mean(i) = s / n
+            sd(i) = System.Math.Sqrt(System.Math.Max(sq - n * mean(i) * mean(i), 0.0))
+        Next
+
+        Dim out(rows * rows - 1) As Double
+
+        For i As Integer = 0 To rows - 1
+            For j As Integer = 0 To rows - 1
+                Dim d As Double = 0
+
+                For k As Integer = 0 To cols - 1
+                    d += data(i * cols + k) * data(j * cols + k)
+                Next
+
+                Dim cov As Double = d - n * mean(i) * mean(j)
+                Dim den As Double = sd(i) * sd(j)
+                Dim c As Double = If(den &gt; 0.0, cov / den, 0.0)
+
+                out(i * rows + j) = If(i = j, 1.0, System.Math.Min(1.0, System.Math.Max(-1.0, c)))
+            Next
+        Next
+
+        Return out
+    End Function
+
+    &#x27;&#x27;&#x27; CPU 参考实现: 欧氏距离矩阵
+    Public Shared Function CpuDistance(data As Single(), rows As Integer, cols As Integer) As Double()
+        Dim sq(rows - 1) As Double
+
+        For i As Integer = 0 To rows - 1
+            Dim s As Double = 0
+
+            For k As Integer = 0 To cols - 1
+                Dim v As Double = data(i * cols + k)
+                s += v * v
+            Next
+
+            sq(i) = s
+        Next
+
+        Dim out(rows * rows - 1) As Double
+
+        For i As Integer = 0 To rows - 1
+            For j As Integer = 0 To rows - 1
+                Dim d As Double = 0
+
+                For k As Integer = 0 To cols - 1
+                    d += data(i * cols + k) * data(j * cols + k)
+                Next
+
+                out(i * rows + j) = If(i = j, 0.0,
+                    System.Math.Sqrt(System.Math.Max(sq(i) + sq(j) - 2.0 * d, 0.0)))
+            Next
+        Next
+
+        Return out
+    End Function
+
+    &#x27;&#x27;&#x27; GPU 结果与 CPU 参考值之间的最大绝对误差
+    Public Shared Function MaxError(got As Single(), expect As Double()) As Double
+        Dim maxDiff As Double = 0
+
+        For i As Integer = 0 To got.Length - 1
+            Dim diff As Double = System.Math.Abs(CDbl(got(i)) - expect(i))
+
+            If diff &gt; maxDiff Then
+                maxDiff = diff
+            End If
+        Next
+
+        Return maxDiff
+    End Function
+
+    &#x27;&#x27;&#x27; GPU 结果与同为单精度的参考值之间的最大绝对误差
+    Public Shared Function MaxErrorSingle(got As Single(), expect As Single()) As Double
+        Dim maxDiff As Double = 0
+
+        For i As Integer = 0 To got.Length - 1
+            Dim diff As Double = System.Math.Abs(CDbl(got(i)) - CDbl(expect(i)))
+
+            If diff &gt; maxDiff Then
+                maxDiff = diff
+            End If
+        Next
+
+        Return maxDiff
+    End Function
+
+    &#x27;&#x27;&#x27; 双精度参考值转单精度, 便于复用同一套预览排版
+    Public Shared Function ToSingle(source As Double()) As Single()
+        Dim out(source.Length - 1) As Single
+
+        For i As Integer = 0 To source.Length - 1
+            out(i) = CSng(source(i))
+        Next
+
+        Return out
+    End Function
+
+    &#x27;&#x27;&#x27; 分节标题
+    Public Shared Sub PrintTitle(text As String)
+        Call Console.WriteLine()
+        Call Console.WriteLine(New String(&quot;=&quot;c, 74))
+        Call Console.WriteLine(&quot;  &quot; &amp; text)
+        Call Console.WriteLine(New String(&quot;=&quot;c, 74))
+    End Sub
+
+    &#x27;&#x27;&#x27; 缩进打印一段多行文本(伪代码 / CUDA 源码)
+    Public Shared Sub PrintBlock(text As String, indent As String)
+        Dim lines As String() = Regex.Split(text, &quot;\r\n|\r|\n&quot;)
+
+        For Each line As String In lines
+            Call Console.WriteLine(indent &amp; line)
+        Next
+    End Sub
+
+    &#x27;&#x27;&#x27; 打印结果矩阵的左上角 n x n
+    Public Shared Sub PrintMatrix(title As String, m As Single(), rows As Integer, n As Integer)
+        Call Console.WriteLine(&quot;  &quot; &amp; title)
+
+        For i As Integer = 0 To n - 1
+            Dim line As New StringBuilder()
+
+            For j As Integer = 0 To n - 1
+                Call line.Append(m(i * rows + j).ToString(&quot;F4&quot;).PadLeft(10))
+            Next
+
+            Call Console.WriteLine(&quot;    &quot; &amp; line.ToString())
+        Next
+    End Sub
+End Class
+
+&#x27; ---------------------------------------------------------------------------
+&#x27;  第 3 节: 主流程
+&#x27; ---------------------------------------------------------------------------
+
+dim rows As Integer = 1024
+dim cols As Integer = 1024
+dim seed As Integer = 42
+dim preview As Integer = 6
+dim allOk As Boolean = True
+
+call TutorialKit.PrintTitle(&quot;IL -&gt; CUDA 教程: 皮尔逊相关矩阵 与 欧氏距离矩阵&quot;)
+call console.WriteLine(&quot;  输入规模: &quot; &amp; rows &amp; &quot; 行 x &quot; &amp; cols &amp; &quot; 列, 随机种子 &quot; &amp; seed)
+
+&#x27; ---------- 造输入矩阵 ----------
+dim data As Single() = TutorialKit.MakeMatrix(rows, cols, seed)
+
+&#x27; ---------- 第 1 步: IL -&gt; AST -&gt; .cu ----------
+dim kernels As New Dictionary(Of String, IlCudaKernel)(StringComparer.Ordinal)
+
+call TutorialKit.PrintTitle(&quot;第 1 步: 把 VB.NET 函数反编译为 AST, 再发射成 .cu&quot;)
+
+for each m As MethodInfo In TutorialKit.Targets()
+    dim errMsg As String = Nothing
+    dim kernel As IlCudaKernel = Nothing
+
+    try
+        kernel = IlCudaTranslator.Translate(m)
+    catch ex As Exception
+        errMsg = ex.GetBaseException().Message
+    end try
+
+    if errMsg IsNot Nothing Then
+        call console.WriteLine(&quot;  &quot; &amp; m.Name &amp; &quot; 反编译失败: &quot; &amp; errMsg)
+        allOk = False
+    else
+        call kernels.Add(m.Name, kernel)
+
+        call console.WriteLine()
+        call console.WriteLine(&quot;  ---- &quot; &amp; m.Name &amp; &quot; ----&quot;)
+        call console.WriteLine(&quot;  索引模式  : &quot; &amp; kernel.IndexMode.ToString())
+        call console.WriteLine(&quot;  设备函数  : &quot; &amp; kernel.DeviceFunctionName)
+        call console.WriteLine(&quot;  内核      : &quot; &amp; kernel.Name)
+        call console.WriteLine()
+        call console.WriteLine(&quot;  还原出的伪代码:&quot;)
+        call TutorialKit.PrintBlock(SyntaxWriter.WriteMethod(kernel.Syntax), &quot;    &quot;)
+        call console.WriteLine()
+        call console.WriteLine(&quot;  生成的 CUDA 源码:&quot;)
+        call TutorialKit.PrintBlock(kernel.Source, &quot;    &quot;)
+
+        &#x27; 解释求值自检: 把同一棵 AST 交给 CPU 解释器执行, 与直接调用原方法比对
+        dim sampleArgs As Object() = TutorialKit.SampleArgs(m)
+        dim expected As Object = m.Invoke(Nothing, sampleArgs)
+        dim actual As Object = New AstInterpreter(kernel.Syntax).Invoke(sampleArgs)
+        dim diff As Double = System.Math.Abs(System.Convert.ToDouble(expected) - System.Convert.ToDouble(actual))
+        dim tol As Double = 1.0E-5 * System.Math.Max(1.0, System.Math.Abs(System.Convert.ToDouble(expected)))
+        dim pass As Boolean = diff &lt;= tol
+
+        call console.WriteLine()
+        call console.WriteLine(&quot;  解释求值自检: 原方法=&quot; &amp; expected &amp; &quot;, AST=&quot; &amp; actual &amp;
+                               &quot;, 差=&quot; &amp; diff.ToString(&quot;E3&quot;) &amp; &quot;  &quot; &amp; (if(pass, &quot;OK&quot;, &quot;FAIL&quot;)))
+
+        if Not pass Then
+            allOk = False
+        end if
+    end if
+next
+
+&#x27; ---------- 第 2 步: 把生成的 .cu 注册进 KernelSources ----------
+call TutorialKit.PrintTitle(&quot;第 2 步: 注册内核源码(必须在创建引擎之前)&quot;)
+
+for each k As IlCudaKernel In kernels.Values
+    call k.Register()
+    call console.WriteLine(&quot;  已注册 &quot; &amp; k.ToString())
+next
+
+&#x27; ---------- 第 3 步: NVRTC 编译 + 启动内核 ----------
+call TutorialKit.PrintTitle(&quot;第 3 步: 在 GPU 上计算相关矩阵与距离矩阵&quot;)
+
+dim opts As New EngineOptions With {.DeviceOrdinal = 0}
+dim engine As CudaEngine = CudaEngine.TryCreate(opts)
+dim corrGPU As Single() = Nothing
+dim distGPU As Single() = Nothing
+dim gpuOk As Boolean = False
+
+if Not allOk Then
+    call console.WriteLine(&quot;  第 1 步存在失败项, 跳过 GPU 计算。&quot;)
+elseif engine Is Nothing Then
+    call console.WriteLine(&quot;  GPU 不可用: &quot; &amp; opts.ErrorMessage)
+
+    dim report = CudaEnvironment.Probe()
+
+    for each s As FixSuggestion In CudaEnvironment.Suggest(report)
+        call console.WriteLine(&quot;  建议: &quot; &amp; s.ToString())
+        call console.WriteLine(&quot;        &quot; &amp; s.Detail)
+    next
+
+    call console.WriteLine()
+    call console.WriteLine(&quot;  &gt;&gt; 已回退 CPU 参考实现, 下面只给出 CPU 结果。&quot;)
+else
+    using engine
+        dim cells As Integer = rows * rows
+
+        call console.WriteLine(&quot;  设备      : &quot; &amp; engine.Device.Name)
+        call console.WriteLine(&quot;  内核镜像  : &quot; &amp; engine.Image.ToString())
+
+        using bufX As New DeviceBuffer(Of Single)(data.Length), _
+              bufSum As New DeviceBuffer(Of Single)(rows), _
+              bufSumSq As New DeviceBuffer(Of Single)(rows), _
+              bufDot As New DeviceBuffer(Of Single)(cells), _
+              bufCorr As New DeviceBuffer(Of Single)(cells), _
+              bufDist As New DeviceBuffer(Of Single)(cells)
+
+            call bufX.Write(data)
+
+            &#x27; 1) 行统计量: 一维内核, 一个线程负责一行
+            call kernels(&quot;RowSum&quot;).Launch(engine, LaunchPlanner.For1D(rows, 256), bufX, cols, bufSum, rows)
+            call kernels(&quot;RowSumSq&quot;).Launch(engine, LaunchPlanner.For1D(rows, 256), bufX, cols, bufSumSq, rows)
+
+            &#x27; 2) Gram 点积: 二维内核
+            call kernels(&quot;GramDot&quot;).Launch(engine, LaunchPlanner.For2D(rows, rows, 16, 16), bufX, cols, bufDot, rows, rows)
+
+            &#x27; 3) 由点积与行统计量还原相关矩阵与距离矩阵
+            call kernels(&quot;CorrelationCell&quot;).Launch(engine, LaunchPlanner.For2D(rows, rows, 16, 16),
+                                                   bufDot, bufSum, bufSumSq, rows, cols, bufCorr, rows, rows)
+            call kernels(&quot;DistanceCell&quot;).Launch(engine, LaunchPlanner.For2D(rows, rows, 16, 16),
+                                                bufDot, bufSumSq, rows, bufDist, rows, rows)
+
+            call engine.Synchronize()
+
+            corrGPU = bufCorr.Read()
+            distGPU = bufDist.Read()
+            gpuOk = True
+
+            &#x27; 4) 约定 3 的演示: 纯标量函数被自动包裹成逐元素内核
+            dim hostDot As Single() = bufDot.Read()
+            dim hostSum As Single() = bufSum.Read()
+            dim hostSumSq As Single() = bufSumSq.Read()
+            dim n1 As Single = CSng(cols)
+            dim cov(cells - 1) As Single
+            dim denom(cells - 1) As Single
+            dim clampRef(cells - 1) As Single
+
+            for i As Integer = 0 To rows - 1
+                dim meanI As Single = hostSum(i) / n1
+                dim varI As Single = hostSumSq(i) - n1 * meanI * meanI
+                dim sdI As Single = MathF.Sqrt(MathF.Max(varI, 0.0F))
+
+                for j As Integer = 0 To rows - 1
+                    dim meanJ As Single = hostSum(j) / n1
+                    dim varJ As Single = hostSumSq(j) - n1 * meanJ * meanJ
+                    dim idx As Integer = i * rows + j
+
+                    cov(idx) = hostDot(idx) - n1 * meanI * meanJ
+                    denom(idx) = sdI * MathF.Sqrt(MathF.Max(varJ, 0.0F))
+                    clampRef(idx) = PearsonMetrics.PearsonClamp(cov(idx), denom(idx))
+                next
+            next
+
+            using bufCov As New DeviceBuffer(Of Single)(cells), _
+                  bufDenom As New DeviceBuffer(Of Single)(cells), _
+                  bufClamp As New DeviceBuffer(Of Single)(cells)
+
+                call bufCov.Write(cov)
+                call bufDenom.Write(denom)
+
+                call kernels(&quot;PearsonClamp&quot;).Launch(engine, LaunchPlanner.For1D(cells, 256),
+                                                    bufCov, bufDenom, bufClamp, cells)
+                call engine.Synchronize()
+
+                dim clampErr As Double = TutorialKit.MaxErrorSingle(bufClamp.Read(), clampRef)
+                dim clampPass As Boolean = clampErr &lt;= 1.0E-5
+
+                call console.WriteLine()
+                call console.WriteLine(&quot;  PearsonClamp(逐元素自动包裹) 最大绝对误差 = &quot; &amp;
+                                       clampErr.ToString(&quot;E3&quot;) &amp; &quot;  &quot; &amp; (if(clampPass, &quot;OK&quot;, &quot;FAIL&quot;)))
+
+                if Not clampPass Then
+                    allOk = False
+                end if
+            end using
+        end using
+    end using
+end if
+
+&#x27; ---------- 第 4 步: 与 CPU 参考实现比对 ----------
+call TutorialKit.PrintTitle(&quot;第 4 步: CPU 参考实现比对 + 结果预览&quot;)
+
+dim refCorr As Double() = TutorialKit.CpuCorrelation(data, rows, cols)
+dim refDist As Double() = TutorialKit.CpuDistance(data, rows, cols)
+
+if gpuOk Then
+    dim eCorr As Double = TutorialKit.MaxError(corrGPU, refCorr)
+    dim eDist As Double = TutorialKit.MaxError(distGPU, refDist)
+    dim corrPass As Boolean = eCorr &lt;= 1.0E-3
+    dim distPass As Boolean = eDist &lt;= 1.0E-2
+
+    call console.WriteLine(&quot;  皮尔逊相关矩阵 最大绝对误差 = &quot; &amp; eCorr.ToString(&quot;E3&quot;) &amp; &quot;  &quot; &amp; (if(corrPass, &quot;OK&quot;, &quot;FAIL&quot;)))
+    call console.WriteLine(&quot;  欧氏距离矩阵   最大绝对误差 = &quot; &amp; eDist.ToString(&quot;E3&quot;) &amp; &quot;  &quot; &amp; (if(distPass, &quot;OK&quot;, &quot;FAIL&quot;)))
+
+    if (Not corrPass) OrElse (Not distPass) Then
+        allOk = False
+    end if
+
+    call console.WriteLine()
+    call TutorialKit.PrintMatrix(&quot;皮尔逊相关矩阵(GPU, 左上 &quot; &amp; preview &amp; &quot; x &quot; &amp; preview &amp; &quot;):&quot;, corrGPU, rows, preview)
+    call console.WriteLine()
+    call TutorialKit.PrintMatrix(&quot;欧氏距离矩阵(GPU, 左上 &quot; &amp; preview &amp; &quot; x &quot; &amp; preview &amp; &quot;):&quot;, distGPU, rows, preview)
+else
+    call console.WriteLine(&quot;  GPU 结果不可用, 下面是 CPU 参考实现的结果。&quot;)
+    call console.WriteLine()
+    call TutorialKit.PrintMatrix(&quot;皮尔逊相关矩阵(CPU, 左上 &quot; &amp; preview &amp; &quot; x &quot; &amp; preview &amp; &quot;):&quot;, TutorialKit.ToSingle(refCorr), rows, preview)
+    call console.WriteLine()
+    call TutorialKit.PrintMatrix(&quot;欧氏距离矩阵(CPU, 左上 &quot; &amp; preview &amp; &quot; x &quot; &amp; preview &amp; &quot;):&quot;, TutorialKit.ToSingle(refDist), rows, preview)
+end if
+
+call console.WriteLine()
+
+if allOk Then
+    call console.WriteLine(&quot;教程全部步骤通过。&quot;)
+else
+    call console.WriteLine(&quot;存在失败项, 请查看上面的输出。&quot;)
+end if
+</code></pre>
+      </div>
+    </section>
+
+    <section id="results">
+      <p class="sec-label"><b>03</b> <span>Results</span></p>
+      <h2>Console output &mdash; <code style="font-size:.7em">stdout.txt</code></h2>
+      <p class="sub">The full command-line log of the run on an NVIDIA RTX A4000 (NVRTC 13.3, compute capability
+        <code>sm_86</code>): decompiled pseudocode, the emitted CUDA source for each of the six kernels,
+        interpreter self-checks, kernel registration, device info and the final CPU-vs-GPU error report with a
+        6&nbsp;&times;&nbsp;6 preview of both result matrices. The complete log scrolls below.</p>
+      <div class="codebox">
+        <div class="codebox-head"><span>vbs.exe cuda.vb &middot; stdout</span>
+          <a href="assets/cuda-stdout.txt" download>Download stdout.txt</a></div>
+        <pre class="term" data-lang="console"><code>==========================================================================
+  IL -&gt; CUDA 教程: 皮尔逊相关矩阵 与 欧氏距离矩阵
+==========================================================================
+  输入规模: 1024 行 x 1024 列, 随机种子 42
+
+==========================================================================
+  第 1 步: 把 VB.NET 函数反编译为 AST, 再发射成 .cu
+==========================================================================
+
+  ---- RowSum ----
+  索引模式  : Grid1D
+  设备函数  : il_RowSum_scalar
+  内核      : il_RowSum_kernel
+
+  还原出的伪代码:
+    Shared Function RowSum(p_x As Single(), p_cols As Integer, p_i As Integer) As Single
+        Dim V_0 As Single = 0F
+        Dim V_1 As Integer = 0
+        Dim V_2 As Integer = 0
+        Dim V_0_1 As Single
+        Dim V_2_1 As Integer
+        Dim V_0_2 As Single = 0F
+        Dim V_1_1 As Integer = (p_cols - 1)
+        Dim V_2_2 As Integer = 0
+        V_0_1 = V_0_2
+        For V_2_1 = V_2_2 While (V_2_1 &lt;= V_1_1) Step ((V_2_1 + 1) - V_2_1)
+            Dim V_0_3 As Single = (V_0_1 + p_x[((p_i * p_cols) + V_2_1)])
+            V_0_1 = V_0_3
+        Next
+        Return V_0_1
+    End Function
+    
+
+  生成的 CUDA 源码:
+    // ===== 本文件由 IL -&gt; AST -&gt; CUDA 流水线自动生成，请勿手工编辑 =====
+    // 来源方法 : RowSum
+    // 设备函数 : il_RowSum_scalar
+    // 内核     : il_RowSum_kernel（索引模式 Grid1D）
+    
+    __device__ float il_RowSum_scalar(const float* __restrict__ p_x, int p_cols, int p_i) {
+        float V_0 = 0.0f;
+        int V_1 = 0;
+        int V_2 = 0;
+        float V_0_1;
+        int V_2_1;
+        float V_0_2 = 0.0f;
+        int V_1_1 = p_cols - 1;
+        int V_2_2 = 0;
+        V_0_1 = V_0_2;
+        for (V_2_1 = V_2_2; V_2_1 &lt;= V_1_1; V_2_1 = V_2_1 + 1) {
+            float V_0_3 = V_0_1 + p_x[(p_i * p_cols) + V_2_1];
+            V_0_1 = V_0_3;
+        }
+        return V_0_1;
+    }
+    
+    extern &quot;C&quot; __global__ void il_RowSum_kernel(const float* __restrict__ p_x, int p_cols, float* __restrict__ il_out, int il_n) {
+        int p_i = blockIdx.x * blockDim.x + threadIdx.x;
+        if (p_i &gt;= il_n) return;
+        il_out[p_i] = il_RowSum_scalar(p_x, p_cols, p_i);
+    }
+    
+
+  解释求值自检: 原方法=-13.5, AST=-13.5, 差=0.000E+000  OK
+
+  ---- RowSumSq ----
+  索引模式  : Grid1D
+  设备函数  : il_RowSumSq_scalar
+  内核      : il_RowSumSq_kernel
+
+  还原出的伪代码:
+    Shared Function RowSumSq(p_x As Single(), p_cols As Integer, p_i As Integer) As Single
+        Dim V_0 As Single = 0F
+        Dim V_1 As Integer = 0
+        Dim V_2 As Integer = 0
+        Dim V_3 As Single = 0F
+        Dim V_0_1 As Single
+        Dim V_2_1 As Integer
+        Dim V_3_1 As Single
+        Dim V_0_2 As Single = 0F
+        Dim V_1_1 As Integer = (p_cols - 1)
+        Dim V_2_2 As Integer = 0
+        V_0_1 = V_0_2
+        V_3_1 = V_3
+        For V_2_1 = V_2_2 While (V_2_1 &lt;= V_1_1) Step ((V_2_1 + 1) - V_2_1)
+            Dim V_3_2 As Single = p_x[((p_i * p_cols) + V_2_1)]
+            Dim V_0_3 As Single = (V_0_1 + (V_3_2 * V_3_2))
+            V_0_1 = V_0_3
+            V_3_1 = V_3_2
+        Next
+        Return V_0_1
+    End Function
+    
+
+  生成的 CUDA 源码:
+    // ===== 本文件由 IL -&gt; AST -&gt; CUDA 流水线自动生成，请勿手工编辑 =====
+    // 来源方法 : RowSumSq
+    // 设备函数 : il_RowSumSq_scalar
+    // 内核     : il_RowSumSq_kernel（索引模式 Grid1D）
+    
+    __device__ float il_RowSumSq_scalar(const float* __restrict__ p_x, int p_cols, int p_i) {
+        float V_0 = 0.0f;
+        int V_1 = 0;
+        int V_2 = 0;
+        float V_3 = 0.0f;
+        float V_0_1;
+        int V_2_1;
+        float V_3_1;
+        float V_0_2 = 0.0f;
+        int V_1_1 = p_cols - 1;
+        int V_2_2 = 0;
+        V_0_1 = V_0_2;
+        V_3_1 = V_3;
+        for (V_2_1 = V_2_2; V_2_1 &lt;= V_1_1; V_2_1 = V_2_1 + 1) {
+            float V_3_2 = p_x[(p_i * p_cols) + V_2_1];
+            float V_0_3 = V_0_1 + (V_3_2 * V_3_2);
+            V_0_1 = V_0_3;
+            V_3_1 = V_3_2;
+        }
+        return V_0_1;
+    }
+    
+    extern &quot;C&quot; __global__ void il_RowSumSq_kernel(const float* __restrict__ p_x, int p_cols, float* __restrict__ il_out, int il_n) {
+        int p_i = blockIdx.x * blockDim.x + threadIdx.x;
+        if (p_i &gt;= il_n) return;
+        il_out[p_i] = il_RowSumSq_scalar(p_x, p_cols, p_i);
+    }
+    
+
+  解释求值自检: 原方法=66.75, AST=66.75, 差=0.000E+000  OK
+
+  ---- GramDot ----
+  索引模式  : Grid2D
+  设备函数  : il_GramDot_scalar
+  内核      : il_GramDot_kernel
+
+  还原出的伪代码:
+    Shared Function GramDot(p_x As Single(), p_cols As Integer, p_i As Integer, p_j As Integer) As Single
+        Dim V_0 As Single = 0F
+        Dim V_1 As Integer = 0
+        Dim V_2 As Integer = 0
+        Dim V_0_1 As Single
+        Dim V_2_1 As Integer
+        Dim V_0_2 As Single = 0F
+        Dim V_1_1 As Integer = (p_cols - 1)
+        Dim V_2_2 As Integer = 0
+        V_0_1 = V_0_2
+        For V_2_1 = V_2_2 While (V_2_1 &lt;= V_1_1) Step ((V_2_1 + 1) - V_2_1)
+            Dim V_0_3 As Single = (V_0_1 + (p_x[((p_i * p_cols) + V_2_1)] * p_x[((p_j * p_cols) + V_2_1)]))
+            V_0_1 = V_0_3
+        Next
+        Return V_0_1
+    End Function
+    
+
+  生成的 CUDA 源码:
+    // ===== 本文件由 IL -&gt; AST -&gt; CUDA 流水线自动生成，请勿手工编辑 =====
+    // 来源方法 : GramDot
+    // 设备函数 : il_GramDot_scalar
+    // 内核     : il_GramDot_kernel（索引模式 Grid2D）
+    
+    __device__ float il_GramDot_scalar(const float* __restrict__ p_x, int p_cols, int p_i, int p_j) {
+        float V_0 = 0.0f;
+        int V_1 = 0;
+        int V_2 = 0;
+        float V_0_1;
+        int V_2_1;
+        float V_0_2 = 0.0f;
+        int V_1_1 = p_cols - 1;
+        int V_2_2 = 0;
+        V_0_1 = V_0_2;
+        for (V_2_1 = V_2_2; V_2_1 &lt;= V_1_1; V_2_1 = V_2_1 + 1) {
+            float V_0_3 = V_0_1 + (p_x[(p_i * p_cols) + V_2_1] * p_x[(p_j * p_cols) + V_2_1]);
+            V_0_1 = V_0_3;
+        }
+        return V_0_1;
+    }
+    
+    extern &quot;C&quot; __global__ void il_GramDot_kernel(const float* __restrict__ p_x, int p_cols, float* __restrict__ il_out, int il_nRows, int il_nCols) {
+        int p_i = blockIdx.y * blockDim.y + threadIdx.y;
+        int p_j = blockIdx.x * blockDim.x + threadIdx.x;
+        if (p_i &gt;= il_nRows || p_j &gt;= il_nCols) return;
+        il_out[p_i * il_nCols + p_j] = il_GramDot_scalar(p_x, p_cols, p_i, p_j);
+    }
+    
+
+  解释求值自检: 原方法=-14.5, AST=-14.5, 差=0.000E+000  OK
+
+  ---- CorrelationCell ----
+  索引模式  : Grid2D
+  设备函数  : il_CorrelationCell_scalar
+  内核      : il_CorrelationCell_kernel
+
+  还原出的伪代码:
+    Shared Function CorrelationCell(p_dot As Single(), p_rowSum As Single(), p_rowSumSq As Single(), p_rows As Integer, p_cols As Integer, p_i As Integer, p_j As Integer) As Single
+        Dim V_0 As Single = 0F
+        Dim V_1 As Single = 0F
+        Dim V_2 As Single = 0F
+        Dim V_3 As Single = 0F
+        Dim V_4 As Single = 0F
+        Dim V_5 As Single = 0F
+        Dim V_6 As Single = 0F
+        Dim V_7 As Single = 0F
+        Dim V_0_1 As Single
+        Dim V_1_1 As Single
+        Dim V_2_1 As Single
+        Dim V_3_1 As Single
+        Dim V_4_1 As Single
+        Dim V_5_1 As Single
+        Dim V_6_1 As Single
+        Dim V_7_2 As Single
+        Dim V_7_1 As Single
+        If (p_i &lt;&gt; p_j) Then
+            Dim V_1_2 As Single = CType(p_cols, Single)
+            Dim V_2_2 As Single = (p_rowSum[p_i] / V_1_2)
+            Dim V_3_2 As Single = (p_rowSum[p_j] / V_1_2)
+            Dim V_4_2 As Single = (p_rowSumSq[p_j] - ((V_1_2 * V_3_2) * V_3_2))
+            Dim V_5_2 As Single = (p_dot[((p_i * p_rows) + p_j)] - ((V_1_2 * V_2_2) * V_3_2))
+            Dim V_6_2 As Single = (System.MathF.Sqrt(System.MathF.Max((p_rowSumSq[p_i] - ((V_1_2 * V_2_2) * V_2_2)), 0F)) * System.MathF.Sqrt(System.MathF.Max(V_4_2, 0F)))
+            If (V_6_2 &lt;= 1E-12F) Then
+                Dim V_7_4 As Single = 0F
+                V_7_1 = V_7_4
+            Else
+                Dim V_7_3 As Single = (V_5_2 / V_6_2)
+                V_7_1 = V_7_3
+            End If
+            Dim V_0_3 As Single = System.MathF.Min(1F, System.MathF.Max(-1F, V_7_1))
+            V_0_1 = V_0_3
+            V_1_1 = V_1_2
+            V_2_1 = V_2_2
+            V_3_1 = V_3_2
+            V_4_1 = V_4_2
+            V_5_1 = V_5_2
+            V_6_1 = V_6_2
+            V_7_2 = V_7_1
+        Else
+            Dim V_0_2 As Single = 1F
+            V_0_1 = V_0_2
+            V_1_1 = V_1
+            V_2_1 = V_2
+            V_3_1 = V_3
+            V_4_1 = V_4
+            V_5_1 = V_5
+            V_6_1 = V_6
+            V_7_2 = V_7
+        End If
+        Return V_0_1
+    End Function
+    
+
+  生成的 CUDA 源码:
+    // ===== 本文件由 IL -&gt; AST -&gt; CUDA 流水线自动生成，请勿手工编辑 =====
+    // 来源方法 : CorrelationCell
+    // 设备函数 : il_CorrelationCell_scalar
+    // 内核     : il_CorrelationCell_kernel（索引模式 Grid2D）
+    
+    __device__ float il_CorrelationCell_scalar(const float* __restrict__ p_dot, const float* __restrict__ p_rowSum, const float* __restrict__ p_rowSumSq, int p_rows, int p_cols, int p_i, int p_j) {
+        float V_0 = 0.0f;
+        float V_1 = 0.0f;
+        float V_2 = 0.0f;
+        float V_3 = 0.0f;
+        float V_4 = 0.0f;
+        float V_5 = 0.0f;
+        float V_6 = 0.0f;
+        float V_7 = 0.0f;
+        float V_0_1;
+        float V_1_1;
+        float V_2_1;
+        float V_3_1;
+        float V_4_1;
+        float V_5_1;
+        float V_6_1;
+        float V_7_2;
+        float V_7_1;
+        if (p_i != p_j) {
+            float V_1_2 = ((float)p_cols);
+            float V_2_2 = p_rowSum[p_i] / V_1_2;
+            float V_3_2 = p_rowSum[p_j] / V_1_2;
+            float V_4_2 = p_rowSumSq[p_j] - ((V_1_2 * V_3_2) * V_3_2);
+            float V_5_2 = p_dot[(p_i * p_rows) + p_j] - ((V_1_2 * V_2_2) * V_3_2);
+            float V_6_2 = sqrtf(fmaxf(p_rowSumSq[p_i] - ((V_1_2 * V_2_2) * V_2_2), 0.0f)) * sqrtf(fmaxf(V_4_2, 0.0f));
+            if (V_6_2 &lt;= 1E-12f) {
+                float V_7_4 = 0.0f;
+                V_7_1 = V_7_4;
+            } else {
+                float V_7_3 = V_5_2 / V_6_2;
+                V_7_1 = V_7_3;
+            }
+            float V_0_3 = fminf(1.0f, fmaxf(-1.0f, V_7_1));
+            V_0_1 = V_0_3;
+            V_1_1 = V_1_2;
+            V_2_1 = V_2_2;
+            V_3_1 = V_3_2;
+            V_4_1 = V_4_2;
+            V_5_1 = V_5_2;
+            V_6_1 = V_6_2;
+            V_7_2 = V_7_1;
+        } else {
+            float V_0_2 = 1.0f;
+            V_0_1 = V_0_2;
+            V_1_1 = V_1;
+            V_2_1 = V_2;
+            V_3_1 = V_3;
+            V_4_1 = V_4;
+            V_5_1 = V_5;
+            V_6_1 = V_6;
+            V_7_2 = V_7;
+        }
+        return V_0_1;
+    }
+    
+    extern &quot;C&quot; __global__ void il_CorrelationCell_kernel(const float* __restrict__ p_dot, const float* __restrict__ p_rowSum, const float* __restrict__ p_rowSumSq, int p_rows, int p_cols, float* __restrict__ il_out, int il_nRows, int il_nCols) {
+        int p_i = blockIdx.y * blockDim.y + threadIdx.y;
+        int p_j = blockIdx.x * blockDim.x + threadIdx.x;
+        if (p_i &gt;= il_nRows || p_j &gt;= il_nCols) return;
+        il_out[p_i * il_nCols + p_j] = il_CorrelationCell_scalar(p_dot, p_rowSum, p_rowSumSq, p_rows, p_cols, p_i, p_j);
+    }
+    
+
+  解释求值自检: 原方法=0, AST=0, 差=0.000E+000  OK
+
+  ---- DistanceCell ----
+  索引模式  : Grid2D
+  设备函数  : il_DistanceCell_scalar
+  内核      : il_DistanceCell_kernel
+
+  还原出的伪代码:
+    Shared Function DistanceCell(p_dot As Single(), p_rowSumSq As Single(), p_rows As Integer, p_i As Integer, p_j As Integer) As Single
+        Dim V_0 As Single = 0F
+        Dim V_1 As Single = 0F
+        Dim V_0_1 As Single
+        Dim V_1_1 As Single
+        If (p_i &lt;&gt; p_j) Then
+            Dim V_1_2 As Single = p_dot[((p_i * p_rows) + p_j)]
+            Dim V_0_3 As Single = System.MathF.Sqrt(System.MathF.Max(((p_rowSumSq[p_i] + p_rowSumSq[p_j]) - (2F * V_1_2)), 0F))
+            V_0_1 = V_0_3
+            V_1_1 = V_1_2
+        Else
+            Dim V_0_2 As Single = 0F
+            V_0_1 = V_0_2
+            V_1_1 = V_1
+        End If
+        Return V_0_1
+    End Function
+    
+
+  生成的 CUDA 源码:
+    // ===== 本文件由 IL -&gt; AST -&gt; CUDA 流水线自动生成，请勿手工编辑 =====
+    // 来源方法 : DistanceCell
+    // 设备函数 : il_DistanceCell_scalar
+    // 内核     : il_DistanceCell_kernel（索引模式 Grid2D）
+    
+    __device__ float il_DistanceCell_scalar(const float* __restrict__ p_dot, const float* __restrict__ p_rowSumSq, int p_rows, int p_i, int p_j) {
+        float V_0 = 0.0f;
+        float V_1 = 0.0f;
+        float V_0_1;
+        float V_1_1;
+        if (p_i != p_j) {
+            float V_1_2 = p_dot[(p_i * p_rows) + p_j];
+            float V_0_3 = sqrtf(fmaxf((p_rowSumSq[p_i] + p_rowSumSq[p_j]) - (2.0f * V_1_2), 0.0f));
+            V_0_1 = V_0_3;
+            V_1_1 = V_1_2;
+        } else {
+            float V_0_2 = 0.0f;
+            V_0_1 = V_0_2;
+            V_1_1 = V_1;
+        }
+        return V_0_1;
+    }
+    
+    extern &quot;C&quot; __global__ void il_DistanceCell_kernel(const float* __restrict__ p_dot, const float* __restrict__ p_rowSumSq, int p_rows, float* __restrict__ il_out, int il_nRows, int il_nCols) {
+        int p_i = blockIdx.y * blockDim.y + threadIdx.y;
+        int p_j = blockIdx.x * blockDim.x + threadIdx.x;
+        if (p_i &gt;= il_nRows || p_j &gt;= il_nCols) return;
+        il_out[p_i * il_nCols + p_j] = il_DistanceCell_scalar(p_dot, p_rowSumSq, p_rows, p_i, p_j);
+    }
+    
+
+  解释求值自检: 原方法=0.70710677, AST=0.70710677, 差=0.000E+000  OK
+
+  ---- PearsonClamp ----
+  索引模式  : Grid1D
+  设备函数  : il_PearsonClamp_scalar
+  内核      : il_PearsonClamp_kernel
+
+  还原出的伪代码:
+    Shared Function PearsonClamp(p_cov As Single, p_denom As Single) As Single
+        Dim V_0 As Single = 0F
+        Dim V_0_1 As Single
+        If (p_denom &lt;= 1E-12F) Then
+            Dim V_0_3 As Single = 0F
+            V_0_1 = V_0_3
+        Else
+            Dim V_0_2 As Single = (p_cov / p_denom)
+            V_0_1 = V_0_2
+        End If
+        Return System.MathF.Min(1F, System.MathF.Max(-1F, V_0_1))
+    End Function
+    
+
+  生成的 CUDA 源码:
+    // ===== 本文件由 IL -&gt; AST -&gt; CUDA 流水线自动生成，请勿手工编辑 =====
+    // 来源方法 : PearsonClamp
+    // 设备函数 : il_PearsonClamp_scalar
+    // 内核     : il_PearsonClamp_kernel（索引模式 Grid1D）
+    
+    __device__ float il_PearsonClamp_scalar(float p_cov, float p_denom) {
+        float V_0 = 0.0f;
+        float V_0_1;
+        if (p_denom &lt;= 1E-12f) {
+            float V_0_3 = 0.0f;
+            V_0_1 = V_0_3;
+        } else {
+            float V_0_2 = p_cov / p_denom;
+            V_0_1 = V_0_2;
+        }
+        return fminf(1.0f, fmaxf(-1.0f, V_0_1));
+    }
+    
+    extern &quot;C&quot; __global__ void il_PearsonClamp_kernel(const float* __restrict__ p_cov, const float* __restrict__ p_denom, float* __restrict__ il_out, int il_n) {
+        int il_i = blockIdx.x * blockDim.x + threadIdx.x;
+        if (il_i &gt;= il_n) return;
+        il_out[il_i] = il_PearsonClamp_scalar(p_cov[il_i], p_denom[il_i]);
+    }
+    
+
+  解释求值自检: 原方法=1, AST=1, 差=0.000E+000  OK
+
+==========================================================================
+  第 2 步: 注册内核源码(必须在创建引擎之前)
+==========================================================================
+  已注册 il_RowSum_kernel [Grid1D] &lt;- PearsonMetrics.RowSum
+  已注册 il_RowSumSq_kernel [Grid1D] &lt;- PearsonMetrics.RowSumSq
+  已注册 il_GramDot_kernel [Grid2D] &lt;- PearsonMetrics.GramDot
+  已注册 il_CorrelationCell_kernel [Grid2D] &lt;- PearsonMetrics.CorrelationCell
+  已注册 il_DistanceCell_kernel [Grid2D] &lt;- PearsonMetrics.DistanceCell
+  已注册 il_PearsonClamp_kernel [Grid1D] &lt;- PearsonMetrics.PearsonClamp
+
+==========================================================================
+  第 3 步: 在 GPU 上计算相关矩阵与距离矩阵
+==========================================================================
+  设备      : NVIDIA RTX A4000
+  内核镜像  : NVRTC 13.3 (cubin) arch=sm_86 [C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v13.3\bin\x64\nvrtc64_130_0.dll]
+
+  PearsonClamp(逐元素自动包裹) 最大绝对误差 = 0.000E+000  OK
+
+==========================================================================
+  第 4 步: CPU 参考实现比对 + 结果预览
+==========================================================================
+  皮尔逊相关矩阵 最大绝对误差 = 2.221E-007  OK
+  欧氏距离矩阵   最大绝对误差 = 2.069E-005  OK
+
+  皮尔逊相关矩阵(GPU, 左上 6 x 6):
+        1.0000   -0.0151   -0.0096   -0.0299   -0.0083    0.0006
+       -0.0151    1.0000   -0.0564   -0.0311   -0.0131   -0.0156
+       -0.0096   -0.0564    1.0000    0.0206   -0.0392   -0.0140
+       -0.0299   -0.0311    0.0206    1.0000    0.0250   -0.0570
+       -0.0083   -0.0131   -0.0392    0.0250    1.0000   -0.0185
+        0.0006   -0.0156   -0.0140   -0.0570   -0.0185    1.0000
+
+  欧氏距离矩阵(GPU, 左上 6 x 6):
+        0.0000   26.8603   26.5958   26.5702   26.4389   26.4184
+       26.8603    0.0000   27.1844   26.5662   26.4858   26.5902
+       26.5958   27.1844    0.0000   25.6775   26.5984   26.3983
+       26.5702   26.5662   25.6775    0.0000   25.4752   26.6538
+       26.4389   26.4858   26.5984   25.4752    0.0000   26.3193
+       26.4184   26.5902   26.3983   26.6538   26.3193    0.0000
+
+教程全部步骤通过。</code></pre>
+      </div>
+      <div class="note">Every verification line ends in <b><code>OK</code></b>: the AST interpreter reproduces the
+        original method results bit-for-bit on all six kernels, the element-wise <code>PearsonClamp</code> wrapper
+        matches its host-side reference at <code>0.000E+000</code>, and both GPU matrices agree with the
+        double-precision CPU baseline to single-precision rounding.</div>
+      <div class="dlrow">
+        <a class="dl" href="assets/cuda.vb" download>cuda.vb</a>
+        <a class="dl" href="assets/cuda-stdout.txt" download>stdout.txt</a>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ================= footer ================= -->
+  <footer class="site">
+    <div class="pn">
+      <a href="demo-kmeans.html"><span>Previous</span>Tutorial 01 &mdash; K-means + PCA</a>
+      <a href="demo-mnist.html"><span>Next</span>Tutorial 03 &mdash; UMAP manifold</a>
+    </div>
+    <div class="legal">sciBASIC# &middot; GNU GPLv3 &middot; scibasic.net</div>
+  </footer>
+
+  <script>
+  /* ---- tiny static highlighters: graceful no-op if anything fails ---- */
+  (function () {
+    function esc(s) {
+      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    /* ---- VB / VBScript ---- */
+    var VB_RE = new RegExp([
+      '("(?:[^"\\\n]|\\.)*")',                                   /* 1 string   */
+      "('[^\n]*)",                                                  /* 2 comment  */
+      '(#[A-Za-z]+[^\n]*)',                                         /* 3 preproc  */
+      '\\b(Public|Private|Protected|Shared|Function|Sub|Class|Module|Structure|Enum|Interface|Dim|As|New|For|Each|In|Next|To|Step|While|End|If|Then|Else|ElseIf|Select|Case|Return|Try|Catch|Finally|Throw|Using|Imports|Call|Not|And|OrElse|AndAlso|Or|Nothing|True|False|Of|From|Exit|Continue|ByVal|ByRef|Me|MyClass|MyBase|Get|Set|ReadOnly|Const|Namespace|Overrides|Overloads|MustOverride|Implements|Inherits|Handles|WithEvents|With|CType|CSng|CDbl|CInt|CLng|CStr|CBool|CObj|GetType|Integer|Single|Double|String|Boolean|Object|Long|Short|Byte|Char|Date|Delegate|Event|RaiseEvent|SyncLock|Yield|Await|Async|Option|Strict|On|Off|IsNot|Is|Like|Mod|Xor)\\b', /* 4 keyword */
+      '(\\b\\d+(?:\\.\\d+)?(?:[Ee][+-]?\\d+)?[Fd]?\\b)'                      /* 5 number   */
+    ].join('|'), 'g');
+
+    function hlVB(src) {
+      var out = '', last = 0, m;
+      VB_RE.lastIndex = 0;
+      while ((m = VB_RE.exec(src))) {
+        out += esc(src.slice(last, m.index));
+        var cls = m[1] ? 'tk-s' : m[2] ? 'tk-c' : m[3] ? 'tk-p' : m[5] ? 'tk-n' : 'tk-k';
+        out += '<span class="' + cls + '">' + esc(m[0]) + '</span>';
+        last = m.index + m[0].length;
+      }
+      return out + esc(src.slice(last));
+    }
+
+    /* ---- console output ---- */
+    function hlTerm(src) {
+      return src.split(/\r?\n/).map(function (line) {
+        var e = esc(line);
+        if (/^\s*=+\s*$/.test(line)) return '<span class="sep">' + e + '</span>';
+        if (/\bFAIL\b/.test(line)) return e.replace(/FAIL/g, '<span class="fail">FAIL</span>');
+        if (/OK\s*$/.test(line)) return e.replace(/OK(\s*)$/, '<span class="ok">OK</span>$1');
+        if (/(\u8bbe\u5907|\u5185\u6838\u955c\u50cf)/.test(line)) return '<span class="em">' + e + '</span>';
+        return e;
+      }).join('\n');
+    }
+
+    try {
+      document.querySelectorAll('pre.code[data-lang="vb"] > code').forEach(function (el) {
+        el.innerHTML = hlVB(el.textContent);
+      });
+      document.querySelectorAll('pre.term[data-lang="console"] > code').forEach(function (el) {
+        el.innerHTML = hlTerm(el.textContent);
+      });
+    } catch (e) { /* keep plain text */ }
+  })();
+</script>
+</body>
+
+</html>

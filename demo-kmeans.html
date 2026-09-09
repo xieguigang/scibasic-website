@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="description" content="Cluster the Bezdek Iris dataset with sciBASIC# k-means, reduce it to two principal components and render a labeled PCA scatter &mdash; full VBScript demo with figure and CSV table preview." />
+  <title>Tutorial 01 &mdash; K-means + PCA on the Iris dataset &middot; sciBASIC#</title>
+  <link rel="icon" type="image/png" href="favicon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #030303;
+      --ink: #f2f2f2;
+      --ink-dim: #9a9a9a;
+      --ink-faint: #6b6b6b;
+      --ink-ghost: #4a4a4a;
+      --hairline: rgba(255, 255, 255, .16);
+      --hairline2: rgba(255, 255, 255, .08);
+      --green: #3fae4a;
+      --warn: #ff7a6e;
+      --sans: 'Inter', 'Helvetica Neue', 'Segoe UI', system-ui, sans-serif;
+      --mono: ui-monospace, 'Cascadia Code', 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html { background: var(--bg); }
+
+    body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--sans);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      line-height: 1.6;
+    }
+
+    ::selection { background: rgba(63, 174, 74, .25); }
+
+    a { color: inherit; }
+
+    /* ---------- top bar (same skeleton as index.html) ---------- */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 60;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 3.4vw;
+      background: rgba(3, 3, 3, .84);
+      -webkit-backdrop-filter: blur(16px);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--hairline2);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      text-decoration: none;
+      font-size: 14.5px;
+      font-weight: 600;
+      letter-spacing: .01em;
+      color: var(--ink);
+    }
+
+    .brand img { width: 25px; height: 25px; display: block; }
+
+    .topnav {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 44px;
+    }
+
+    .topnav a {
+      font-size: 13px;
+      color: var(--ink-dim);
+      text-decoration: none;
+      letter-spacing: .02em;
+      transition: color .25s;
+    }
+
+    .topnav a:hover, .topnav a.on { color: var(--ink); }
+
+    .home-btn {
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      border: 1px solid var(--hairline);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--ink-dim);
+      text-decoration: none;
+      font-size: 16px;
+      line-height: 1;
+      transition: color .25s, border-color .25s, transform .25s;
+    }
+
+    .home-btn:hover { color: var(--ink); border-color: rgba(255, 255, 255, .5); }
+
+    @media (max-width: 900px) { .topnav { display: none; } }
+
+    /* ---------- document shell ---------- */
+    .wrap { width: min(1060px, 92vw); margin: 0 auto; padding: 76px 0 30px; }
+
+    .eyebrow {
+      display: flex;
+      gap: 14px;
+      align-items: baseline;
+      font-size: 10px;
+      letter-spacing: .32em;
+      text-transform: uppercase;
+      color: var(--ink-ghost);
+    }
+
+    .eyebrow b { color: var(--green); font-weight: 500; }
+
+    h1.headline {
+      font-size: clamp(26px, 3.4vw, 42px);
+      font-weight: 400;
+      line-height: 1.35;
+      letter-spacing: -.012em;
+      margin: 24px 0 26px;
+      max-width: 22em;
+    }
+
+    h1.headline .u { border-bottom: 1px solid rgba(255, 255, 255, .85); padding-bottom: 1px; }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 30px;
+      font-size: 10.5px;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      border-top: 1px solid var(--hairline2);
+      border-bottom: 1px solid var(--hairline2);
+      padding: 14px 0;
+    }
+
+    .meta b { color: var(--ink-dim); font-weight: 500; }
+
+    .lede {
+      max-width: 66em;
+      color: var(--ink-dim);
+      font-size: 15px;
+      line-height: 1.9;
+      margin: 30px 0 0;
+    }
+
+    .lede code, .step code, .note code, figcaption code {
+      font-family: var(--mono);
+      font-size: .86em;
+      background: #101010;
+      border: 1px solid var(--hairline2);
+      padding: 1px 6px;
+      color: var(--ink);
+    }
+
+    /* ---------- sections ---------- */
+    section { margin-top: 72px; }
+
+    .sec-label {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      font-size: 10px;
+      letter-spacing: .3em;
+      text-transform: uppercase;
+      color: var(--ink-ghost);
+    }
+
+    .sec-label::after { content: ''; flex: 1; height: 1px; background: var(--hairline2); }
+
+    .sec-label b { color: var(--green); font-weight: 500; }
+
+    h2 {
+      font-size: clamp(20px, 2.2vw, 28px);
+      font-weight: 400;
+      letter-spacing: -.01em;
+      margin: 18px 0 10px;
+    }
+
+    .sub { color: var(--ink-faint); font-size: 13.5px; line-height: 1.8; max-width: 62em; }
+
+    /* ---------- pipeline steps ---------- */
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(185px, 1fr));
+      gap: 30px 26px;
+      margin-top: 30px;
+    }
+
+    .step { border-top: 1px solid var(--hairline); padding-top: 14px; }
+
+    .step .no { font-size: 10px; letter-spacing: .3em; color: var(--green); }
+
+    .step h3 { font-size: 13.5px; font-weight: 500; letter-spacing: .03em; margin: 10px 0 7px; }
+
+    .step p { font-size: 11.5px; line-height: 1.75; color: var(--ink-faint); }
+
+    /* ---------- code box ---------- */
+    .codebox { margin-top: 24px; border: 1px solid var(--hairline2); background: #0a0a0a; }
+
+    .codebox-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+      padding: 11px 18px;
+      border-bottom: 1px solid var(--hairline2);
+      font-size: 10px;
+      letter-spacing: .22em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+    }
+
+    .codebox-head a {
+      color: var(--ink-dim);
+      text-decoration: none;
+      border-bottom: 1px solid var(--hairline);
+      padding-bottom: 2px;
+      transition: color .25s, border-color .25s;
+    }
+
+    .codebox-head a:hover { color: var(--ink); border-color: rgba(255, 255, 255, .5); }
+
+    pre.code {
+      margin: 0;
+      padding: 20px 22px;
+      overflow: auto;
+      font-family: var(--mono);
+      font-size: 12.5px;
+      line-height: 1.72;
+      color: #c9c9c9;
+      tab-size: 4;
+    }
+
+    pre.code.tall { max-height: 640px; }
+
+    .tk-c { color: var(--ink-faint); font-style: italic; }
+    .tk-k { color: var(--green); }
+    .tk-s { color: #d8e6d8; }
+    .tk-p { color: var(--ink-dim); }
+    .tk-n { color: #8fae96; }
+
+    /* ---------- figures ---------- */
+    figure.fig { margin-top: 26px; border: 1px solid var(--hairline2); background: #0a0a0a; padding: 20px; }
+
+    .fig img { width: auto; max-width: 100%; height: auto; display: block; margin: 0 auto; }
+
+    figcaption { margin-top: 16px; font-size: 12px; line-height: 1.85; color: var(--ink-faint); }
+
+    figcaption b { color: var(--ink-dim); font-weight: 500; }
+
+    /* ---------- callout ---------- */
+    .note {
+      margin-top: 28px;
+      border-left: 2px solid var(--green);
+      padding: 4px 0 4px 22px;
+      color: var(--ink-dim);
+      font-size: 13.5px;
+      line-height: 1.9;
+      max-width: 62em;
+    }
+
+    .note b { color: var(--ink); font-weight: 500; }
+
+    /* ---------- tables ---------- */
+    .tablewrap { margin-top: 24px; border: 1px solid var(--hairline2); background: #0a0a0a; overflow-x: auto; }
+
+    table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 12px; }
+
+    th {
+      font-family: var(--sans);
+      font-size: 10px;
+      letter-spacing: .22em;
+      text-transform: uppercase;
+      color: var(--ink-ghost);
+      font-weight: 500;
+      text-align: left;
+      padding: 11px 16px;
+      border-bottom: 1px solid var(--hairline);
+      white-space: nowrap;
+    }
+
+    td { padding: 9px 16px; border-bottom: 1px solid var(--hairline2); color: var(--ink-dim); white-space: nowrap; }
+
+    td.num { text-align: right; }
+
+    tbody tr:last-child td { border-bottom: none; }
+
+    tbody tr:hover td { background: #0d0d0d; }
+
+    tr.ell td { color: var(--ink-ghost); text-align: center; letter-spacing: .5em; font-size: 10px; }
+
+    /* ---------- terminal ---------- */
+    pre.term {
+      margin: 0;
+      padding: 20px 22px;
+      overflow: auto;
+      max-height: 580px;
+      font-family: var(--mono);
+      font-size: 12.5px;
+      line-height: 1.72;
+      color: #b9b9b9;
+      white-space: pre;
+    }
+
+    .term .sep { color: var(--ink-ghost); }
+    .term .ok { color: var(--green); }
+    .term .fail { color: var(--warn); }
+    .term .em { color: var(--ink); }
+
+    /* ---------- downloads ---------- */
+    .dlrow { display: flex; flex-wrap: wrap; gap: 16px 38px; margin-top: 28px; }
+
+    a.dl {
+      font-size: 13px;
+      color: var(--ink-dim);
+      text-decoration: none;
+      letter-spacing: .02em;
+      border-bottom: 1px solid var(--hairline);
+      padding-bottom: 5px;
+      transition: color .25s, border-color .25s;
+    }
+
+    a.dl:hover { color: var(--ink); border-color: rgba(255, 255, 255, .6); }
+
+    a.dl::after { content: '\2192'; margin-left: 2px; opacity: 0; transition: opacity .25s, margin-left .25s; }
+
+    a.dl:hover::after { opacity: 1; margin-left: 8px; }
+
+    /* ---------- footer ---------- */
+    footer.site {
+      margin-top: 110px;
+      border-top: 1px solid var(--hairline2);
+      padding: 34px 3.4vw 52px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 28px;
+      flex-wrap: wrap;
+    }
+
+    .pn { display: flex; gap: 44px; flex-wrap: wrap; }
+
+    .pn a { text-decoration: none; color: var(--ink-dim); font-size: 13.5px; border-bottom: 1px solid var(--hairline); padding-bottom: 5px; transition: color .25s, border-color .25s; }
+
+    .pn a:hover { color: var(--ink); border-color: rgba(255, 255, 255, .6); }
+
+    .pn a span { display: block; font-size: 10px; letter-spacing: .3em; text-transform: uppercase; color: var(--ink-ghost); margin-bottom: 8px; }
+
+    .legal { font-size: 11px; letter-spacing: .12em; color: var(--ink-ghost); }
+</style>
+</head>
+
+<body>
+  <!-- ================= global top bar ================= -->
+  <header class="topbar">
+    <a class="brand" href="./">
+      <img src="favicon.png" alt="sciBASIC# knot logo" />
+      <strong>sciBASIC#</strong>
+    </a>
+    <nav class="topnav">
+      <a href="https://github.com/xieguigang/sciBASIC" target="_blank" rel="noopener">Library&mdash;</a>
+      <a href="demo-kmeans.html" class="on">Tutorials&mdash;</a>
+      <a href="https://github.com/xieguigang/sciBASIC/tree/master/docs" target="_blank" rel="noopener">Docs</a>
+    </nav>
+    <a class="home-btn" href="./" aria-label="Back to home" title="Back to home">&#8598;</a>
+  </header>
+
+  <main class="wrap">
+    <!-- ================= page head ================= -->
+    <p class="eyebrow"><b>01</b> <span>Tutorial &mdash; K-means + PCA</span></p>
+    <h1 class="headline">Cluster the <span class="u">Iris</span> dataset with k-means, then unfold it onto a <span class="u">2-D PCA</span> scatter.</h1>
+    <div class="meta">
+      <span>Module <b>DataMining &middot; KMeans + PCA</b></span>
+      <span>Dataset <b>bezdekIris &middot; 150 &times; 4</b></span>
+      <span>Clusters <b>k = 3</b></span>
+      <span>Output <b>PNG + CSV</b></span>
+    </div>
+    <p class="lede">A complete unsupervised-learning pass over the classic Bezdek Iris table &mdash; 150 specimens, four morphological measurements, three hidden species &mdash; driven by a short VBScript run on the sciBASIC# script engine. The script loads the table with the <code>DataFrame</code> resolver, partitions it into <code>k&nbsp;=&nbsp;3</code> clusters, projects the four-dimensional points onto the first two principal components, renders an 800&nbsp;&times;&nbsp;600 Nature-themed scatter, and exports the fully annotated table as CSV.</p>
+
+
+    <section id="pipeline">
+      <p class="sec-label"><b>02</b> <span>Pipeline</span></p>
+      <h2>Five statements, end to end</h2>
+      <div class="steps">
+        <div class="step"><div class="no">Step 1</div><h3>Load</h3>
+          <p><code>DataFrameResolver.LoadDataSet</code> reads the CSV table and maps columns <code>D1&ndash;D4</code> into k-means feature models.</p></div>
+        <div class="step"><div class="no">Step 2</div><h3>Cluster</h3>
+          <p><code>dataset.kmeans(expected:=3)</code> partitions the 150 specimens; <code>ClassId()</code> recovers the cluster label vector.</p></div>
+        <div class="step"><div class="no">Step 3</div><h3>Reduce</h3>
+          <p><code>PrincipalComponentAnalysis(maxPC:=2)</code> + <code>GetPCAScore()</code> unfold the 4-D points onto the PC1 / PC2 plane.</p></div>
+        <div class="step"><div class="no">Step 4</div><h3>Plot</h3>
+          <p>A <code>ScatterPlot</code> (800 &times; 600, <code>PlotTheme.Nature</code>) colors every sample by its cluster id.</p></div>
+        <div class="step"><div class="no">Step 5</div><h3>Export</h3>
+          <p><code>plt.SavePng</code> writes the 300-dpi figure; <code>result.saveto</code> streams the annotated table to CSV.</p></div>
+      </div>
+    </section>
+    <section id="script">
+      <p class="sec-label"><b>01</b> <span>The Script</span></p>
+      <h2>Full demo source</h2>
+      <p class="sub">The complete script exactly as executed by the sciBASIC# script engine (<code>vbs.exe</code>) &mdash; nothing elided.</p>
+      <div class="codebox">
+        <div class="codebox-head"><span>kmeans.vb &middot; 34 lines</span><a href="assets/kmeans.vb" download>Download kmeans.vb</a></div>
+        <pre class="code" data-lang="vb"><code>#include &quot;Microsoft.VisualBasic.DataMining.Framework.dll&quot;
+#include &quot;Microsoft.VisualBasic.Data.Framework.dll&quot;
+#include &quot;Microsoft.VisualBasic.Data.DataPlot.dll&quot;
+#include &quot;Microsoft.VisualBasic.Math.Statistics.ANOVA.dll&quot;
+#include &quot;Microsoft.VisualBasic.Drawing.dll&quot;
+
+imports microsoft.visualbasic.data.framework.storageprovider
+imports microsoft.visualbasic.datamining.kmeans
+imports microsoft.visualbasic.datamining
+imports microsoft.visualbasic.data.framework
+imports Microsoft.VisualBasic.Math.Statistics.Hypothesis.ANOVA
+imports microsoft.visualbasic.data.plots
+imports microsoft.visualbasic.drawing
+
+dim file = &quot;G:\GCModeller\src\R-sharp\REnv\data\bezdekIris.csv&quot;
+dim k = 3
+
+dim dataset = DataFrameResolver.LoadDataSet(file, cols := {&quot;D1&quot;,&quot;D2&quot;,&quot;D3&quot;,&quot;D4&quot;}).ToKMeansModels()
+dim result = dataset.kmeans( expected := k).toarray()
+dim pca = result.CommonDataSet.PrincipalComponentAnalysis(maxPC := 2).GetPCAScore()
+dim class_id = result.ClassId().ToArray()
+
+SkiaDriver.Register()
+
+Using plt As New ScatterPlot(800, 600, PlotTheme.Nature())
+    plt.Title = &quot;PCA group of bezdek-Iris&quot;
+    plt.SubTitle = &quot;PCA score scatter with 3 iris species colors&quot;
+    plt.XLabel = &quot;PC1&quot;
+    plt.YLabel = &quot;PC2&quot;
+    plt.Plot(DataSerials(x:=pca!PC1,y:=pca!PC2, class_id).tolist())
+    plt.SavePng(&quot;Z:/bezdekIris-pca-groups.png&quot;, 300)
+End Using
+
+call result.saveto(&quot;Z:/bezdekIris-pca-groups.csv&quot;)
+</code></pre>
+      </div>
+    </section>
+
+    <section id="results">
+      <p class="sec-label"><b>03</b> <span>Results</span></p>
+      <h2>PCA scatter &amp; cluster table</h2>
+      <figure class="fig">
+        <img src="assets/bezdekIris-pca-groups.png" width="800" height="600"
+             alt="PCA score scatter of the bezdekIris dataset, 150 points colored by k-means cluster" />
+        <figcaption><b>Fig. 1</b> &mdash; PC1 / PC2 score scatter of the Bezdek Iris table, 150 specimens colored by
+          k-means cluster. Cluster 1 (red) &mdash; <em>I. setosa</em> &mdash; occupies a region of its own on the left;
+          clusters 2 and 3 (blue / green) partition the morphologically intergrading
+          <em>versicolor&ndash;virginica</em> range.</figcaption>
+      </figure>
+      <h2 style="margin-top:56px">Table preview &mdash; <code style="font-size:.7em">bezdekIris-pca-groups.csv</code></h2>
+      <p class="sub">The exported table keeps the original species label (<code>ID</code>) next to the assigned
+        cluster number (<code>class</code>) and the four raw measurements. First rows, a middle slice and the last
+        rows are shown; the full file holds all 150 data rows.</p>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>ID</th><th>class</th><th>D1</th><th>D2</th><th>D3</th><th>D4</th></tr></thead>
+          <tbody>
+          <tr><td>Iris-setosa</td><td class="num">1</td><td class="num">5.1</td><td class="num">3.5</td><td class="num">1.4</td><td class="num">0.2</td></tr>
+          <tr><td>Iris-setosa</td><td class="num">1</td><td class="num">4.9</td><td class="num">3</td><td class="num">1.4</td><td class="num">0.2</td></tr>
+          <tr><td>Iris-setosa</td><td class="num">1</td><td class="num">4.7</td><td class="num">3.2</td><td class="num">1.3</td><td class="num">0.2</td></tr>
+          <tr><td>Iris-setosa</td><td class="num">1</td><td class="num">4.6</td><td class="num">3.1</td><td class="num">1.5</td><td class="num">0.2</td></tr>
+          <tr><td>Iris-setosa</td><td class="num">1</td><td class="num">5</td><td class="num">3.6</td><td class="num">1.4</td><td class="num">0.2</td></tr>
+          <tr class="ell"><td colspan="6">&middot;&middot;&middot;</td></tr>
+          <tr><td>Iris-versicolor</td><td class="num">2</td><td class="num">7</td><td class="num">3.2</td><td class="num">4.7</td><td class="num">1.4</td></tr>
+          <tr><td>Iris-versicolor</td><td class="num">2</td><td class="num">6.4</td><td class="num">3.2</td><td class="num">4.5</td><td class="num">1.5</td></tr>
+          <tr><td>Iris-versicolor</td><td class="num">2</td><td class="num">5.5</td><td class="num">2.3</td><td class="num">4</td><td class="num">1.3</td></tr>
+          <tr class="ell"><td colspan="6">&middot;&middot;&middot;</td></tr>
+          <tr><td>Iris-virginica</td><td class="num">3</td><td class="num">6.7</td><td class="num">3</td><td class="num">5.2</td><td class="num">2.3</td></tr>
+          <tr><td>Iris-virginica</td><td class="num">3</td><td class="num">6.5</td><td class="num">3</td><td class="num">5.2</td><td class="num">2</td></tr>
+          <tr><td>Iris-virginica</td><td class="num">3</td><td class="num">6.2</td><td class="num">3.4</td><td class="num">5.4</td><td class="num">2.3</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Species</th><th style="text-align:right">Cluster 1</th><th style="text-align:right">Cluster 2</th><th style="text-align:right">Cluster 3</th></tr></thead>
+          <tbody>
+            <tr><td>Iris-setosa</td><td class="num">50</td><td class="num">0</td><td class="num">0</td></tr>
+            <tr><td>Iris-versicolor</td><td class="num">0</td><td class="num">48</td><td class="num">2</td></tr>
+            <tr><td>Iris-virginica</td><td class="num">0</td><td class="num">14</td><td class="num">36</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note">K-means recovers <b><em>I. setosa</em> perfectly</b> &mdash; all 50 specimens land in cluster 1 &mdash;
+        and splits the overlapping <b>versicolor / virginica</b> pair 48&ndash;14 vs 2&ndash;36, the textbook result for this dataset.</div>
+      <div class="dlrow">
+        <a class="dl" href="assets/kmeans.vb" download>kmeans.vb</a>
+        <a class="dl" href="assets/bezdekIris-pca-groups.csv" download>bezdekIris-pca-groups.csv</a>
+        <a class="dl" href="assets/bezdekIris-pca-groups.png" download>bezdekIris-pca-groups.png</a>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ================= footer ================= -->
+  <footer class="site">
+    <div class="pn">
+      <a href="./"><span>Previous</span>Home</a>
+      <a href="demo-cuda.html"><span>Next</span>Tutorial 02 &mdash; IL &#8594; CUDA</a>
+    </div>
+    <div class="legal">sciBASIC# &middot; GNU GPLv3 &middot; scibasic.net</div>
+  </footer>
+
+  <script>
+  /* ---- tiny static highlighters: graceful no-op if anything fails ---- */
+  (function () {
+    function esc(s) {
+      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    /* ---- VB / VBScript ---- */
+    var VB_RE = new RegExp([
+      '("(?:[^"\\\n]|\\.)*")',                                   /* 1 string   */
+      "('[^\n]*)",                                                  /* 2 comment  */
+      '(#[A-Za-z]+[^\n]*)',                                         /* 3 preproc  */
+      '\\b(Public|Private|Protected|Shared|Function|Sub|Class|Module|Structure|Enum|Interface|Dim|As|New|For|Each|In|Next|To|Step|While|End|If|Then|Else|ElseIf|Select|Case|Return|Try|Catch|Finally|Throw|Using|Imports|Call|Not|And|OrElse|AndAlso|Or|Nothing|True|False|Of|From|Exit|Continue|ByVal|ByRef|Me|MyClass|MyBase|Get|Set|ReadOnly|Const|Namespace|Overrides|Overloads|MustOverride|Implements|Inherits|Handles|WithEvents|With|CType|CSng|CDbl|CInt|CLng|CStr|CBool|CObj|GetType|Integer|Single|Double|String|Boolean|Object|Long|Short|Byte|Char|Date|Delegate|Event|RaiseEvent|SyncLock|Yield|Await|Async|Option|Strict|On|Off|IsNot|Is|Like|Mod|Xor)\\b', /* 4 keyword */
+      '(\\b\\d+(?:\\.\\d+)?(?:[Ee][+-]?\\d+)?[Fd]?\\b)'                      /* 5 number   */
+    ].join('|'), 'g');
+
+    function hlVB(src) {
+      var out = '', last = 0, m;
+      VB_RE.lastIndex = 0;
+      while ((m = VB_RE.exec(src))) {
+        out += esc(src.slice(last, m.index));
+        var cls = m[1] ? 'tk-s' : m[2] ? 'tk-c' : m[3] ? 'tk-p' : m[5] ? 'tk-n' : 'tk-k';
+        out += '<span class="' + cls + '">' + esc(m[0]) + '</span>';
+        last = m.index + m[0].length;
+      }
+      return out + esc(src.slice(last));
+    }
+
+    /* ---- console output ---- */
+    function hlTerm(src) {
+      return src.split(/\r?\n/).map(function (line) {
+        var e = esc(line);
+        if (/^\s*=+\s*$/.test(line)) return '<span class="sep">' + e + '</span>';
+        if (/\bFAIL\b/.test(line)) return e.replace(/FAIL/g, '<span class="fail">FAIL</span>');
+        if (/OK\s*$/.test(line)) return e.replace(/OK(\s*)$/, '<span class="ok">OK</span>$1');
+        if (/(\u8bbe\u5907|\u5185\u6838\u955c\u50cf)/.test(line)) return '<span class="em">' + e + '</span>';
+        return e;
+      }).join('\n');
+    }
+
+    try {
+      document.querySelectorAll('pre.code[data-lang="vb"] > code').forEach(function (el) {
+        el.innerHTML = hlVB(el.textContent);
+      });
+      document.querySelectorAll('pre.term[data-lang="console"] > code').forEach(function (el) {
+        el.innerHTML = hlTerm(el.textContent);
+      });
+    } catch (e) { /* keep plain text */ }
+  })();
+</script>
+</body>
+
+</html>
