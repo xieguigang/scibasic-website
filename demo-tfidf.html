@@ -5,8 +5,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="color-scheme" content="dark" />
-  <meta name="description" content="Reduce the 60,000-image MNIST training split to a 2-D UMAP manifold with sciBASIC# and render a digit-label-colored scatter &mdash; full VBScript demo and result figure." />
-  <title>Tutorial 03 &mdash; UMAP manifold of MNIST &middot; sciBASIC#</title>
+  <meta name="description" content="Build a TF-IDF index over five documents with sciBASIC# NLP, compute pairwise square distances and render a Plasma heatmap &mdash; full VBScript demo, corpus table and result figure." />
+  <title>Tutorial 05 &mdash; TF-IDF document distance heatmap &middot; sciBASIC#</title>
   <link rel="icon" type="image/png" href="favicon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -386,36 +386,51 @@
 
   <main class="wrap">
     <!-- ================= page head ================= -->
-    <p class="eyebrow"><b>03</b> <span>Tutorial &mdash; UMAP manifold</span></p>
-    <h1 class="headline">Project <span class="u">60,000 handwritten digits</span> onto a <span class="u">2-D UMAP manifold</span>, colored by label.</h1>
+    <p class="eyebrow"><b>05</b> <span>Tutorial &mdash; Text features</span></p>
+    <h1 class="headline">Turn five short documents into a <span class="u">TF-IDF space</span>, then measure how far apart their vocabularies sit.</h1>
     <div class="meta">
-      <span>Module <b>DataMining &middot; UMAP</b></span>
-      <span>Dataset <b>MNIST train &middot; 60,000 &times; 784</b></span>
-      <span>Embedding <b>2-D &middot; 128 neighbors</b></span>
-      <span>Output <b>PNG &middot; 300 dpi</b></span>
+      <span>Module <b>Data.NLP &middot; TFIDF</b></span>
+      <span>Corpus <b>5 documents</b></span>
+      <span>Matrix <b>5 &times; 5 square distance</b></span>
+      <span>Output <b>PNG &middot; 300 dpi &middot; Plasma</b></span>
     </div>
-    <p class="lede">The MNIST training split &mdash; 60,000 grayscale 28&nbsp;&times;&nbsp;28 digits &mdash; is read straight from the original <code>idx3/idx1</code> binary files, wrapped as <code>ClusterEntity</code> rows and pushed through the sciBASIC# UMAP implementation: 2 target dimensions, 128 nearest neighbors. After <code>InitializeFit</code> reports the epoch schedule, a single <code>Step(n_epochs)</code> optimizes the embedding, and the resulting manifold is rendered as a Nature-themed scatter in which every point carries its digit label as color.</p>
+    <p class="lede">TF-IDF is the smallest useful model of "what a document is about". This demo registers five short documents in the sciBASIC# <code>TFIDF</code> index, pulls each one back out as a weighted term vector, and fills a 5&nbsp;&times;&nbsp;5 matrix of pairwise squared distances &mdash; printed to the console and rendered as a <code>Plasma</code>-colored heatmap where dark cells mean "same vocabulary" and bright cells mean "different worlds".</p>
 
 
     <section id="pipeline">
       <p class="sec-label"><b>02</b> <span>Pipeline</span></p>
-      <h2>From idx binaries to a labeled manifold</h2>
+      <h2>From five sentences to a distance matrix</h2>
       <div class="steps">
-        <div class="step"><div class="no">Step 1</div><h3>Load</h3>
-          <p><code>MNIST</code> reads <code>train-images-idx3-ubyte</code> + <code>train-labels-idx1-ubyte</code>;
-          <code>ExtractDataSet(Of ClusterEntity)</code> yields labeled 784-D feature rows.</p></div>
-        <div class="step"><div class="no">Step 2</div><h3>Configure</h3>
-          <p><code>new umap(dimensions:=2, numberOfNeighbors:=128)</code> builds the fuzzy simplicial set over the
-          784-dimensional space.</p></div>
-        <div class="step"><div class="no">Step 3</div><h3>Fit</h3>
-          <p><code>InitializeFit(dataset)</code> constructs the graph and returns the epoch schedule
-          <code>n_epochs</code>.</p></div>
-        <div class="step"><div class="no">Step 4</div><h3>Embed</h3>
-          <p><code>umap.Step(n_epochs)</code> optimizes the low-dimensional layout;
-          <code>GetEmbedding()</code> returns one 2-D coordinate per image.</p></div>
-        <div class="step"><div class="no">Step 5</div><h3>Plot</h3>
-          <p>A <code>ScatterPlot</code> (800 &times; 600, <code>PlotTheme.Nature</code>) draws UMAP1 vs UMAP2 with
-          each point colored by its digit label.</p></div>
+        <div class="step"><div class="no">Step 1</div><h3>Index</h3>
+          <p>Every document is whitespace-tokenized (<code>StringSplit("\s+")</code>) and registered in the
+          <code>TFIDF</code> index via <code>tfIdf.Add(++i, tokens)</code>, building the inverted
+          document&ndash;term table.</p></div>
+        <div class="step"><div class="no">Step 2</div><h3>Vectorize</h3>
+          <p><code>tfIdf.TfidfVectorizer(id)</code> maps every document to its sparse TF-IDF weights: term
+          frequency scaled by inverse document frequency.</p></div>
+        <div class="step"><div class="no">Step 3</div><h3>Measure</h3>
+          <p>All 25 pairs are compared with <code>v.SquareDistance</code>; the row loops echo the matrix to the
+          console while filling a 5&nbsp;&times;&nbsp;5 array.</p></div>
+        <div class="step"><div class="no">Step 4</div><h3>Visualize</h3>
+          <p>A <code>HeatmapPlot</code> (800 &times; 600, <code>PlotTheme.Light</code>) renders the matrix with the
+          <code>Plasma</code> colormap and saves it at 300&nbsp;dpi.</p></div>
+      </div>
+    </section>
+    <section id="corpus">
+      <p class="sec-label"><b>03</b> <span>The corpus</span></p>
+      <h2>Five documents, twenty-five pairs</h2>
+      <p class="sec-p">The exact texts registered by <code>tfIdf.Add</code> &mdash; five short notes on knowledge building and creative environments:</p>
+      <div class="tablewrap">
+        <table class="corpus">
+          <thead><tr><th>Document</th><th>Text</th></tr></thead>
+          <tbody>
+          <tr><td>doc_1</td><td class="doc">knowledge building needs innovative environments are better at helping their inhabitants explore the adjacent possible</td></tr>
+          <tr><td>doc_2</td><td class="doc">As a basis for evaluating explanations, creative knowledge building weight of evidence is a poor substitute for the first two criteria listed above.</td></tr>
+          <tr><td>doc_3</td><td class="doc">A public idea database makes every passing idea visible to everyone else in the organization and do creative work.</td></tr>
+          <tr><td>doc_4</td><td class="doc">questioning and various disturbances initiate cycles of innovation and creative organization knowledge.</td></tr>
+          <tr><td>doc_5</td><td class="doc">We need some way to ensure knowledge to spread among environments that any notes that are dropped are dropped.</td></tr>
+          </tbody>
+        </table>
       </div>
     </section>
     <section id="script">
@@ -423,67 +438,88 @@
       <h2>Full demo source</h2>
       <p class="sub">The complete script exactly as executed by the sciBASIC# script engine (<code>vbs.exe</code>) &mdash; nothing elided.</p>
       <div class="codebox">
-        <div class="codebox-head"><span>mnist_umap.vb &middot; 40 lines</span><a href="assets/mnist_umap.vb" download>Download mnist_umap.vb</a></div>
-        <pre class="code" data-lang="vb"><code>#include &quot;Microsoft.VisualBasic.DataMining.UMAP.dll&quot;
-#include &quot;Microsoft.VisualBasic.MachineLearning.DataStorage.dll&quot;
-#include &quot;Microsoft.VisualBasic.DataMining.Framework.dll&quot;
+        <div class="codebox-head"><span>tfidf.vb &middot; 61 lines</span><a href="assets/tfidf.vb" download>Download tfidf.vb</a></div>
+        <pre class="code" data-lang="vb"><code>#include &quot;Microsoft.VisualBasic.Data.NLP.dll&quot;
+#include &quot;Microsoft.VisualBasic.Data.Framework.dll&quot;
 #include &quot;Microsoft.VisualBasic.Drawing.dll&quot;
 #include &quot;Microsoft.VisualBasic.Data.DataPlot.dll&quot;
-#include &quot;Microsoft.VisualBasic.Math.Randomizer.dll&quot;
 
-imports Microsoft.VisualBasic.MachineLearning.DataStorage
-imports Microsoft.VisualBasic.DataMining.ComponentModel.EntityModels
-imports Microsoft.VisualBasic.DataMining.UMAP
-imports Microsoft.VisualBasic.DataMining
-imports Microsoft.VisualBasic.Scripting.Runtime
+Imports System.IO
+Imports Microsoft.VisualBasic.ComponentModel.Collection
+Imports Microsoft.VisualBasic.Data.NLP
+Imports Microsoft.VisualBasic.Language
+Imports Microsoft.VisualBasic.Math.Correlations
 imports microsoft.visualbasic.data.plots
 imports microsoft.visualbasic.drawing
+imports Microsoft.VisualBasic.Data.Framework
 
-dim mnist as new MNIST(
-    &quot;G:\GCModeller\src\R-sharp\test\demo\machineLearning\umap\mnist_dataset\train-images-idx3-ubyte&quot;, 
-    &quot;G:\GCModeller\src\R-sharp\test\demo\machineLearning\umap\mnist_dataset\train-labels-idx1-ubyte&quot;)
-dim dataset = mnist.ExtractDataSet(of ClusterEntity)().toarray()
-dim umap as new umap(dimensions := 2,numberOfNeighbors := 128 )
-dim n_epochs As Integer = umap.InitializeFit(dataset)
-dim number = dataset.ClassId().ascharacter().toarray()
+Dim docs = New String() {
+    &quot;knowledge building needs innovative environments are better at helping their inhabitants explore the adjacent possible&quot;,
+    &quot;As a basis for evaluating explanations, creative knowledge building weight of evidence is a poor substitute for the first two criteria listed above.&quot;,
+    &quot;A public idea database makes every passing idea visible to everyone else in the organization and do creative work.&quot;,
+    &quot;questioning and various disturbances initiate cycles of innovation and creative organization knowledge.&quot;,
+    &quot;We need some way to ensure knowledge to spread among environments that any notes that are dropped are dropped.&quot;
+}
 
-Call umap.Step(n_epochs)
+Dim tfIdf As New TFIDF
+Dim i As i32 = 1
 
-dim manifold = umap.GetEmbedding()
-dim x = from v as double() in manifold select v(0)
-dim y = from v as double() in manifold select v(1)
+For Each seq As String In docs
+    Call tfIdf.Add(++i, seq.StringSplit(&quot;\s+&quot;))
+Next
+
+Dim N As Integer = docs.Length
+Dim dist As Double()() = RectangularArray.Matrix(Of Double)(N, N)
+
+For id As Integer = 1 To tfIdf.N
+    Dim v = tfIdf.TfidfVectorizer(id.ToString)
+    Dim rd As Double() = New Double(N - 1) {}
+
+    Console.Write(id.ToString() &amp; vbTab)
+
+    For j As Integer = 1 To tfIdf.N
+        Dim d = v.SquareDistance(tfIdf.TfidfVectorizer(j.ToString))
+
+        rd(j - 1) = d
+        Call Console.Write(d.ToString(&quot;F4&quot;).PadLeft(8, &quot;0&quot;c) &amp; vbTab)
+    Next
+
+    dist(id - 1) = rd.ToArray
+
+    Call Console.WriteLine()
+Next
 
 call SkiaDriver.Register()
 
-Using plt As New ScatterPlot(800, 600, PlotTheme.Nature())
-    plt.Title = &quot;MNIST dataset UMAP embedding&quot;
-    plt.SubTitle = &quot;UMAP manifold of 2 dimensions&quot;
-    plt.XLabel = &quot;UMAP1&quot;
-    plt.YLabel = &quot;UMAP2&quot;
-    plt.Plot(DataSerials(x:=x.toarray(),y:=y.toarray(), number).tolist())
-    plt.SavePng(&quot;Z:/mnist-umap.png&quot;, 300)
-End Using
-
-</code></pre>
+Using plt As New HeatmapPlot(800, 600, PlotTheme.Light())
+    plt.Title = &quot;TF-IDF Document Distance Heatmap&quot;
+    plt.Matrix = dist.ToMatrix()
+    plt.RowLabels = fieldName(&quot;doc&quot;, dist.length, sep := &quot;_&quot;).toarray()
+    plt.ColLabels = fieldName(&quot;doc&quot;, dist.length, sep := &quot;_&quot;).ToArray()
+    plt.ColorMap = HeatmapPlot.ColorMapType.Plasma
+    plt.ShowValues = False
+    plt.Plot()
+    plt.SavePng(&quot;Z:/tfidf-heatmap.png&quot;, 300)
+End Using</code></pre>
       </div>
     </section>
 
     <section id="results">
       <p class="sec-label"><b>03</b> <span>Results</span></p>
-      <h2>The 2-D manifold</h2>
+      <h2>The document-distance heatmap</h2>
       <figure class="fig">
-        <img src="assets/mnist-umap.png" width="800" height="600"
-             alt="UMAP embedding of the MNIST training split, points colored by digit label" />
-        <figcaption><b>Fig. 1</b> &mdash; UMAP embedding of the MNIST training split; every point is one
-          handwritten digit, colored by its label. The manifold resolves the handwriting styles into well-separated
-          islands, and structurally similar digits settle into neighboring lobes of the embedding.</figcaption>
+        <img src="assets/tfidf-heatmap.png" width="800" height="600"
+             alt="Plasma heatmap of pairwise TF-IDF square distances between five documents" />
+        <figcaption><b>Fig. 1</b> &mdash; Pairwise <em>squared</em> TF-IDF distances over the five-document corpus.
+          The diagonal reads dark (zero distance to itself), and the brightest cell &mdash; <b>doc_2 &harr;
+          doc_5</b> &mdash; marks the pair of documents whose weighted vocabularies diverge the most.</figcaption>
       </figure>
-      <div class="note">UMAP preserves local neighborhood structure: images that look alike stay adjacent after the
-        784-D&nbsp;&rarr;&nbsp;2-D projection, so the digit classes <b>emerge as islands without any use of the
-        labels during optimization</b> &mdash; labels only provide the colors in the final scatter.</div>
+      <div class="note"><b>SquareDistance</b> is used on purpose: the demo shows the raw squared metric, so cell
+        values grow quadratically with vocabulary mismatch &mdash; and the Plasma color scale runs from the zero
+        diagonal up to the bright-yellow doc_2&nbsp;&harr;&nbsp;doc_5 pair.</div>
       <div class="dlrow">
-        <a class="dl" href="assets/mnist_umap.vb" download>mnist_umap.vb</a>
-        <a class="dl" href="assets/mnist-umap.png" download>mnist-umap.png</a>
+        <a class="dl" href="assets/tfidf.vb" download>tfidf.vb</a>
+        <a class="dl" href="assets/tfidf-heatmap.png" download>tfidf-heatmap.png</a>
       </div>
     </section>
 
@@ -492,8 +528,8 @@ End Using
   <!-- ================= footer ================= -->
   <footer class="site">
     <div class="pn">
-      <a href="demo-cuda.html"><span>Previous</span>Tutorial 02 &mdash; IL &#8594; CUDA</a>
-      <a href="demo-hola.html"><span>Next</span>Tutorial 04 &mdash; HOLA layout</a>
+      <a href="demo-hola.html"><span>Previous</span>Tutorial 04 &mdash; HOLA layout</a>
+      <a href="demo-word2vec.html"><span>Next</span>Tutorial 06 &mdash; Word2Vec embeddings</a>
     </div>
     <div class="legal">sciBASIC# &middot; GNU GPLv3 &middot; scibasic.net</div>
   </footer>

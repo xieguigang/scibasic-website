@@ -5,8 +5,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="color-scheme" content="dark" />
-  <meta name="description" content="Reduce the 60,000-image MNIST training split to a 2-D UMAP manifold with sciBASIC# and render a digit-label-colored scatter &mdash; full VBScript demo and result figure." />
-  <title>Tutorial 03 &mdash; UMAP manifold of MNIST &middot; sciBASIC#</title>
+  <meta name="description" content="Train CBOW word vectors on the Rapunzel fairy tale with sciBASIC#, reduce the embedding with UMAP, cluster with k-means and render the scatter &mdash; full VBScript demo, table preview and result figure." />
+  <title>Tutorial 06 &mdash; Word2Vec embeddings of Rapunzel &middot; sciBASIC#</title>
   <link rel="icon" type="image/png" href="favicon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -386,36 +386,37 @@
 
   <main class="wrap">
     <!-- ================= page head ================= -->
-    <p class="eyebrow"><b>03</b> <span>Tutorial &mdash; UMAP manifold</span></p>
-    <h1 class="headline">Project <span class="u">60,000 handwritten digits</span> onto a <span class="u">2-D UMAP manifold</span>, colored by label.</h1>
+    <p class="eyebrow"><b>06</b> <span>Tutorial &mdash; Word embeddings</span></p>
+    <h1 class="headline">Train <span class="u">CBOW word vectors</span> on the tale of Rapunzel, then unfold the embedding with <span class="u">UMAP</span> and k-means.</h1>
     <div class="meta">
-      <span>Module <b>DataMining &middot; UMAP</b></span>
-      <span>Dataset <b>MNIST train &middot; 60,000 &times; 784</b></span>
-      <span>Embedding <b>2-D &middot; 128 neighbors</b></span>
-      <span>Output <b>PNG &middot; 300 dpi</b></span>
+      <span>Module <b>Data.NLP &middot; Word2Vec</b></span>
+      <span>Corpus <b>Rapunzel.txt &middot; CBOW</b></span>
+      <span>Vectors <b>461 words &middot; 30-D</b></span>
+      <span>Embedding <b>UMAP 9-D &middot; 64 neighbors &middot; k = 9</b></span>
     </div>
-    <p class="lede">The MNIST training split &mdash; 60,000 grayscale 28&nbsp;&times;&nbsp;28 digits &mdash; is read straight from the original <code>idx3/idx1</code> binary files, wrapped as <code>ClusterEntity</code> rows and pushed through the sciBASIC# UMAP implementation: 2 target dimensions, 128 nearest neighbors. After <code>InitializeFit</code> reports the epoch schedule, a single <code>Step(n_epochs)</code> optimizes the embedding, and the resulting manifold is rendered as a Nature-themed scatter in which every point carries its digit label as color.</p>
+    <p class="lede">One fairy tale, one model, one picture of a vocabulary. The Grimm text of <em>Rapunzel</em> is segmented into sentences and fed to a continuous bag-of-words trainer (30 dimensions, min term frequency 1, single thread). The resulting 461 word vectors are projected onto a 9-dimensional UMAP manifold, partitioned into nine k-means clusters, and drawn as a Nature-themed scatter of UMAP1 vs UMAP2 &mdash; with the full coordinates exported to CSV.</p>
 
 
     <section id="pipeline">
       <p class="sec-label"><b>02</b> <span>Pipeline</span></p>
-      <h2>From idx binaries to a labeled manifold</h2>
+      <h2>From fairy tale to 9-D embedding</h2>
       <div class="steps">
-        <div class="step"><div class="no">Step 1</div><h3>Load</h3>
-          <p><code>MNIST</code> reads <code>train-images-idx3-ubyte</code> + <code>train-labels-idx1-ubyte</code>;
-          <code>ExtractDataSet(Of ClusterEntity)</code> yields labeled 784-D feature rows.</p></div>
-        <div class="step"><div class="no">Step 2</div><h3>Configure</h3>
-          <p><code>new umap(dimensions:=2, numberOfNeighbors:=128)</code> builds the fuzzy simplicial set over the
-          784-dimensional space.</p></div>
-        <div class="step"><div class="no">Step 3</div><h3>Fit</h3>
-          <p><code>InitializeFit(dataset)</code> constructs the graph and returns the epoch schedule
-          <code>n_epochs</code>.</p></div>
-        <div class="step"><div class="no">Step 4</div><h3>Embed</h3>
-          <p><code>umap.Step(n_epochs)</code> optimizes the low-dimensional layout;
-          <code>GetEmbedding()</code> returns one 2-D coordinate per image.</p></div>
-        <div class="step"><div class="no">Step 5</div><h3>Plot</h3>
-          <p>A <code>ScatterPlot</code> (800 &times; 600, <code>PlotTheme.Nature</code>) draws UMAP1 vs UMAP2 with
-          each point colored by its digit label.</p></div>
+        <div class="step"><div class="no">Step 1</div><h3>Segment</h3>
+          <p><code>Paragraph.Segmentation</code> splits the Rapunzel text into paragraphs of sentences, and every
+          sentence stream is handed to <code>wv.readTokens</code>.</p></div>
+        <div class="step"><div class="no">Step 2</div><h3>Train</h3>
+          <p><code>BuildWord2VecFactory</code> configures a continuous bag-of-words model &mdash;
+          <code>setVectorSize(30)</code>, <code>TrainMethod.CBow</code>, <code>setFreqThresold(1)</code>, a single
+          thread &mdash; and <code>wv.training()</code> runs the pass over the tokens.</p></div>
+        <div class="step"><div class="no">Step 3</div><h3>Embed</h3>
+          <p>The 461 word vectors are pushed through <code>umap(dimensions:=9, numberOfNeighbors:=64)</code>:
+          <code>InitializeFit</code> + <code>Step(n_epochs)</code> produce the 9-D manifold.</p></div>
+        <div class="step"><div class="no">Step 4</div><h3>Cluster</h3>
+          <p><code>Kmeans(k:=9)</code> partitions the embedding; <code>ClassId</code> recovers cluster colors and
+          the first two UMAP dimensions become the plot coordinates.</p></div>
+        <div class="step"><div class="no">Step 5</div><h3>Export</h3>
+          <p>A Nature-themed scatter saves the 300-dpi PNG, and the full 461 &times; 11 table is written to CSV
+          with <code>WriteCsv</code>.</p></div>
       </div>
     </section>
     <section id="script">
@@ -423,67 +424,129 @@
       <h2>Full demo source</h2>
       <p class="sub">The complete script exactly as executed by the sciBASIC# script engine (<code>vbs.exe</code>) &mdash; nothing elided.</p>
       <div class="codebox">
-        <div class="codebox-head"><span>mnist_umap.vb &middot; 40 lines</span><a href="assets/mnist_umap.vb" download>Download mnist_umap.vb</a></div>
-        <pre class="code" data-lang="vb"><code>#include &quot;Microsoft.VisualBasic.DataMining.UMAP.dll&quot;
-#include &quot;Microsoft.VisualBasic.MachineLearning.DataStorage.dll&quot;
+        <div class="codebox-head"><span>word2vector.vb &middot; 62 lines</span><a href="assets/word2vector.vb" download>Download word2vector.vb</a></div>
+        <pre class="code" data-lang="vb"><code>#include &quot;Microsoft.VisualBasic.Data.NLP.Word2Vec.dll&quot;
+#include &quot;Microsoft.VisualBasic.Data.NLP.dll&quot;
 #include &quot;Microsoft.VisualBasic.DataMining.Framework.dll&quot;
 #include &quot;Microsoft.VisualBasic.Drawing.dll&quot;
 #include &quot;Microsoft.VisualBasic.Data.DataPlot.dll&quot;
+#include &quot;Microsoft.VisualBasic.Data.Framework.dll&quot;
 #include &quot;Microsoft.VisualBasic.Math.Randomizer.dll&quot;
+#include &quot;Microsoft.VisualBasic.DataMining.UMAP.dll&quot;
 
-imports Microsoft.VisualBasic.MachineLearning.DataStorage
-imports Microsoft.VisualBasic.DataMining.ComponentModel.EntityModels
-imports Microsoft.VisualBasic.DataMining.UMAP
-imports Microsoft.VisualBasic.DataMining
-imports Microsoft.VisualBasic.Scripting.Runtime
+Imports Microsoft.VisualBasic.Data.NLP.Word2Vec
+Imports Microsoft.VisualBasic.Data.NLP.Model
+Imports Microsoft.VisualBasic.DataMining
+Imports Microsoft.VisualBasic.DataMining.Kmeans
 imports microsoft.visualbasic.data.plots
 imports microsoft.visualbasic.drawing
+Imports Microsoft.VisualBasic.Data.Framework
+imports Microsoft.VisualBasic.linq
+imports Microsoft.VisualBasic.scripting.runtime
+imports Microsoft.VisualBasic.DataMining.UMAP
 
-dim mnist as new MNIST(
-    &quot;G:\GCModeller\src\R-sharp\test\demo\machineLearning\umap\mnist_dataset\train-images-idx3-ubyte&quot;, 
-    &quot;G:\GCModeller\src\R-sharp\test\demo\machineLearning\umap\mnist_dataset\train-labels-idx1-ubyte&quot;)
-dim dataset = mnist.ExtractDataSet(of ClusterEntity)().toarray()
-dim umap as new umap(dimensions := 2,numberOfNeighbors := 128 )
-dim n_epochs As Integer = umap.InitializeFit(dataset)
-dim number = dataset.ClassId().ascharacter().toarray()
+dim textfile = &quot;G:\GCModeller\src\runtime\sciBASIC#\Data\TextRank\Rapunzel.txt&quot;
+dim wv As Word2Vec = BuildWord2VecFactory() _
+    .setVectorSize(30) _
+    .setMethod(TrainMethod.CBow) _
+    .setNumOfThread(1) _
+    .setFreqThresold(1) _
+    .build()
+Dim data As Paragraph() = Paragraph.Segmentation(textFile.ReadAllText).ToArray
+
+For Each p As Paragraph In data
+    For Each line In p.sentences
+        Call wv.readTokens(line)
+    Next
+Next
+
+call wv.training()
+
+dim vector = wv.outputVector()
+dim umap as new umap(dimensions := 9,numberOfNeighbors := 64 )
+dim n_epochs = umap.InitializeFit( vector.AsEnumerable().asdataset().toarray())
 
 Call umap.Step(n_epochs)
 
-dim manifold = umap.GetEmbedding()
-dim x = from v as double() in manifold select v(0)
-dim y = from v as double() in manifold select v(1)
+dim clusters = umap.AsDataSet(labels:=vector.tokens).Kmeans(k:=9).toarray()
+dim class_id = clusters.ClassId().ascharacter().toarray()
+dim x = clusters.feature(offset:= 0).toarray()
+dim y = clusters.feature(offset:= 1).toarray()
+dim result = clusters.as_dataframe(colnames:= fieldname(&quot;v&quot;, n:=vector.words).toarray())
 
+&#x27; scatter plot with UMAP1 and UMAP2
 call SkiaDriver.Register()
+call result.add(&quot;class_id&quot;, class_id)
 
 Using plt As New ScatterPlot(800, 600, PlotTheme.Nature())
-    plt.Title = &quot;MNIST dataset UMAP embedding&quot;
-    plt.SubTitle = &quot;UMAP manifold of 2 dimensions&quot;
+    plt.Title = &quot;UMAP group of Rapunzel&quot;
+    plt.SubTitle = &quot;UMAP scatter of the &#x27;Rapunzel&#x27; word2vector embedding result&quot;
     plt.XLabel = &quot;UMAP1&quot;
     plt.YLabel = &quot;UMAP2&quot;
-    plt.Plot(DataSerials(x:=x.toarray(),y:=y.toarray(), number).tolist())
-    plt.SavePng(&quot;Z:/mnist-umap.png&quot;, 300)
+    plt.Plot(DataSerials(x,y, class_id).tolist())
+    plt.SavePng(&quot;Z:/rapunzel-umap-groups.png&quot;, 300)
 End Using
 
-</code></pre>
+call result.WriteCsv(&quot;Z:/rapunzel-umap-groups.csv&quot;)</code></pre>
       </div>
     </section>
 
     <section id="results">
-      <p class="sec-label"><b>03</b> <span>Results</span></p>
-      <h2>The 2-D manifold</h2>
+      <p class="sec-label"><b>04</b> <span>Results</span></p>
+      <h2>The word-vector manifold</h2>
       <figure class="fig">
-        <img src="assets/mnist-umap.png" width="800" height="600"
-             alt="UMAP embedding of the MNIST training split, points colored by digit label" />
-        <figcaption><b>Fig. 1</b> &mdash; UMAP embedding of the MNIST training split; every point is one
-          handwritten digit, colored by its label. The manifold resolves the handwriting styles into well-separated
-          islands, and structurally similar digits settle into neighboring lobes of the embedding.</figcaption>
+        <img src="assets/rapunzel-umap-groups.png" width="800" height="600"
+             alt="UMAP scatter of the Rapunzel word2vec embedding, colored by k-means cluster" />
+        <figcaption><b>Fig. 1</b> &mdash; First two UMAP dimensions of the 30-D CBOW embedding; every point is one
+          of the 461 vocabulary words, colored by its k-means cluster. The manifold keeps distributionally similar
+          words adjacent &mdash; the function-word cloud (<code>and</code>, <code>had</code>, <code>long</code>,
+          <code>to</code>&hellip;) holds the left side, content-word neighborhoods weave through the middle, and
+          recurring word families settle along the lower arc.</figcaption>
       </figure>
-      <div class="note">UMAP preserves local neighborhood structure: images that look alike stay adjacent after the
-        784-D&nbsp;&rarr;&nbsp;2-D projection, so the digit classes <b>emerge as islands without any use of the
-        labels during optimization</b> &mdash; labels only provide the colors in the final scatter.</div>
+      <div class="note">The k-means run is <b>not a semantic claim</b> &mdash; with k&nbsp;=&nbsp;9 it simply
+        partitions the embedding to make the manifold's shape visible. The interesting structure is the smooth
+        word-neighborhood texture underneath, which is what the UMAP coordinates preserve.</div>
       <div class="dlrow">
-        <a class="dl" href="assets/mnist_umap.vb" download>mnist_umap.vb</a>
-        <a class="dl" href="assets/mnist-umap.png" download>mnist-umap.png</a>
+        <a class="dl" href="assets/word2vector.vb" download>word2vector.vb</a>
+        <a class="dl" href="assets/rapunzel-umap-groups.csv" download>rapunzel-umap-groups.csv</a>
+        <a class="dl" href="assets/rapunzel-umap-groups.png" download>rapunzel-umap-groups.png</a>
+      </div>
+    </section>
+    <section id="table">
+      <p class="sec-label"><b>05</b> <span>Table preview</span></p>
+      <h2>rapunzel-umap-groups.csv</h2>
+      <p class="sec-p">461 vocabulary words &times; 9 UMAP dimensions + cluster label. The first and last rows of the exported table:</p>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>word</th><th>v_1</th><th>v_2</th><th>v_3</th><th>v_4</th><th>v_5</th><th>v_6</th><th>v_7</th><th>v_8</th><th>v_9</th><th>class_id</th></tr></thead>
+          <tbody>
+          <tr><td>and</td><td class="num">-0.5998655980554012</td><td class="num">-0.7759891973831121</td><td class="num">1.169754736638962</td><td class="num">-0.772826528168772</td><td class="num">0.7156521329741893</td><td class="num">0.21025708784631048</td><td class="num">-0.611478033873635</td><td class="num">-1.4529130586962897</td><td class="num">0.3460370792220926</td><td class="num">1</td></tr>
+          <tr><td>had</td><td class="num">-0.6991938607880789</td><td class="num">-0.6946228648911119</td><td class="num">0.12972037787514187</td><td class="num">-0.6739333878511627</td><td class="num">0.7210258637655798</td><td class="num">-0.130498710045367</td><td class="num">-1.30958227299042</td><td class="num">-0.414836311624001</td><td class="num">0.50196988847065</td><td class="num">1</td></tr>
+          <tr><td>long</td><td class="num">-0.8830050282036487</td><td class="num">-0.9566397822888046</td><td class="num">0.1104851020968539</td><td class="num">-0.4471946624193759</td><td class="num">1.3011784779612763</td><td class="num">0.3743987948595769</td><td class="num">-0.8793907408675563</td><td class="num">-0.6158811554002226</td><td class="num">-0.18843255385161553</td><td class="num">1</td></tr>
+          <tr><td>to</td><td class="num">-0.7735194063258328</td><td class="num">-0.4736198714648846</td><td class="num">0.34514072471393054</td><td class="num">-0.8714137827541731</td><td class="num">0.8450754845906695</td><td class="num">-0.45378461908639844</td><td class="num">-1.085546106222893</td><td class="num">-0.5440820510909418</td><td class="num">0.4541082982143653</td><td class="num">1</td></tr>
+          <tr class="ell"><td colspan="11">&middot;&middot;&middot;</td></tr>
+          <tr><td>nest;</td><td class="num">-0.4813153824031893</td><td class="num">-0.8224873628673908</td><td class="num">0.8832741767756902</td><td class="num">-0.09913554216479063</td><td class="num">0.5570322656907201</td><td class="num">-0.45318786940140854</td><td class="num">-1.5940159646468028</td><td class="num">-0.8178373571692098</td><td class="num">-0.7555197607380995</td><td class="num">9</td></tr>
+          <tr><td>wandered</td><td class="num">0.080040897563951</td><td class="num">-0.9305804087880384</td><td class="num">0.9510701701903588</td><td class="num">-0.09050471042964342</td><td class="num">1.097090294060036</td><td class="num">-0.8739597344586885</td><td class="num">-0.9871220546903179</td><td class="num">-0.9857527131149838</td><td class="num">-0.2062685269017953</td><td class="num">9</td></tr>
+          <tr><td>roamed</td><td class="num">0.1035974551130789</td><td class="num">-0.5009635799001223</td><td class="num">1.1052984262506593</td><td class="num">0.08165889310921583</td><td class="num">1.031730058988748</td><td class="num">-0.6561032321795301</td><td class="num">-0.7917918859477219</td><td class="num">-1.1913404757919983</td><td class="num">-0.06989926120091404</td><td class="num">9</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h2 class="sub">Cluster sizes</h2>
+      <div class="tablewrap">
+        <table class="corpus">
+          <thead><tr><th>Cluster</th><th>Words</th><th>First members</th></tr></thead>
+          <tbody>
+          <tr><td class="wn">Cluster 1</td><td class="num">65</td><td class="word">and, had, long, to, house, splendid&rsquo;&hellip;</td></tr>
+          <tr><td class="wn">Cluster 2</td><td class="num">72</td><td class="word">once, who, wished, for, child, of&rsquo;&hellip;</td></tr>
+          <tr><td class="wn">Cluster 3</td><td class="num">67</td><td class="word">There, man, These, be, however, dared&rsquo;&hellip;</td></tr>
+          <tr><td class="wn">Cluster 4</td><td class="num">41</td><td class="word">woman, vain, that, grant, full, herbs&rsquo;&hellip;</td></tr>
+          <tr><td class="wn">Cluster 5</td><td class="num">34</td><td class="word">were, length, the, her, back, garden&rsquo;&hellip;</td></tr>
+          <tr><td class="wn">Cluster 6</td><td class="num">44</td><td class="word">was, desire, flowers, no, one, great&rsquo;&hellip;</td></tr>
+          <tr><td class="wn">Cluster 7</td><td class="num">51</td><td class="word">in, It, high, into, power, standing&rsquo;&hellip;</td></tr>
+          <tr><td class="wn">Cluster 8</td><td class="num">48</td><td class="word">a, At, hoped, about, people, seen&rsquo;&hellip;</td></tr>
+          <tr><td class="wn">Cluster 9</td><td class="num">39</td><td class="word">God, little, window, at, which, by&rsquo;&hellip;</td></tr>
+          </tbody>
+        </table>
       </div>
     </section>
 
@@ -492,8 +555,8 @@ End Using
   <!-- ================= footer ================= -->
   <footer class="site">
     <div class="pn">
-      <a href="demo-cuda.html"><span>Previous</span>Tutorial 02 &mdash; IL &#8594; CUDA</a>
-      <a href="demo-hola.html"><span>Next</span>Tutorial 04 &mdash; HOLA layout</a>
+      <a href="demo-tfidf.html"><span>Previous</span>Tutorial 05 &mdash; TF-IDF heatmap</a>
+      <a href="./"><span>Next</span>Home</a>
     </div>
     <div class="legal">sciBASIC# &middot; GNU GPLv3 &middot; scibasic.net</div>
   </footer>

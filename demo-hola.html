@@ -5,8 +5,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="color-scheme" content="dark" />
-  <meta name="description" content="Reduce the 60,000-image MNIST training split to a 2-D UMAP manifold with sciBASIC# and render a digit-label-colored scatter &mdash; full VBScript demo and result figure." />
-  <title>Tutorial 03 &mdash; UMAP manifold of MNIST &middot; sciBASIC#</title>
+  <meta name="description" content="Run the HOLA orthogonal network layout engine on a synthetic 45-node test graph with sciBASIC#: crossing removal, segment alignment and bend-point rendering &mdash; full VBScript demo and result figure." />
+  <title>Tutorial 04 &mdash; HOLA orthogonal layout &middot; sciBASIC#</title>
   <link rel="icon" type="image/png" href="favicon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -386,36 +386,36 @@
 
   <main class="wrap">
     <!-- ================= page head ================= -->
-    <p class="eyebrow"><b>03</b> <span>Tutorial &mdash; UMAP manifold</span></p>
-    <h1 class="headline">Project <span class="u">60,000 handwritten digits</span> onto a <span class="u">2-D UMAP manifold</span>, colored by label.</h1>
+    <p class="eyebrow"><b>04</b> <span>Tutorial &mdash; Orthogonal layout</span></p>
+    <h1 class="headline">Wire a synthetic network into a <span class="u">clean orthogonal schematic</span> with the <span class="u">HOLA layout engine</span>.</h1>
     <div class="meta">
-      <span>Module <b>DataMining &middot; UMAP</b></span>
-      <span>Dataset <b>MNIST train &middot; 60,000 &times; 784</b></span>
-      <span>Embedding <b>2-D &middot; 128 neighbors</b></span>
-      <span>Output <b>PNG &middot; 300 dpi</b></span>
+      <span>Module <b>Data.visualize &middot; Layouts.Hola</b></span>
+      <span>Graph <b>45 nodes &middot; 61 edges &middot; 2 components</b></span>
+      <span>Layout <b>HOLA ortho &middot; edge bends</b></span>
+      <span>Output <b>PNG &middot; 1400 &times; 1400</b></span>
     </div>
-    <p class="lede">The MNIST training split &mdash; 60,000 grayscale 28&nbsp;&times;&nbsp;28 digits &mdash; is read straight from the original <code>idx3/idx1</code> binary files, wrapped as <code>ClusterEntity</code> rows and pushed through the sciBASIC# UMAP implementation: 2 target dimensions, 128 nearest neighbors. After <code>InitializeFit</code> reports the epoch schedule, a single <code>Step(n_epochs)</code> optimizes the embedding, and the resulting manifold is rendered as a Nature-themed scatter in which every point carries its digit label as color.</p>
+    <p class="lede">Layout algorithms are easiest to trust on a graph you can count. This demo builds a deliberately tangled test network &mdash; a 5&nbsp;&times;&nbsp;4 mesh, a 12-node chain anchored across it, a seven-leaf star and an isolated five-ring &mdash; scatters all vertices at fixed-seed random positions, and hands the mess to the <code>HOLA</code> orthogonal layout engine. The result is rendered through <code>NetworkVisualizer</code> with edge bends enabled, straight into a 1400&nbsp;&times;&nbsp;1400 PNG.</p>
 
 
     <section id="pipeline">
       <p class="sec-label"><b>02</b> <span>Pipeline</span></p>
-      <h2>From idx binaries to a labeled manifold</h2>
+      <h2>A tangled graph, then a clean schematic</h2>
       <div class="steps">
-        <div class="step"><div class="no">Step 1</div><h3>Load</h3>
-          <p><code>MNIST</code> reads <code>train-images-idx3-ubyte</code> + <code>train-labels-idx1-ubyte</code>;
-          <code>ExtractDataSet(Of ClusterEntity)</code> yields labeled 784-D feature rows.</p></div>
-        <div class="step"><div class="no">Step 2</div><h3>Configure</h3>
-          <p><code>new umap(dimensions:=2, numberOfNeighbors:=128)</code> builds the fuzzy simplicial set over the
-          784-dimensional space.</p></div>
-        <div class="step"><div class="no">Step 3</div><h3>Fit</h3>
-          <p><code>InitializeFit(dataset)</code> constructs the graph and returns the epoch schedule
-          <code>n_epochs</code>.</p></div>
-        <div class="step"><div class="no">Step 4</div><h3>Embed</h3>
-          <p><code>umap.Step(n_epochs)</code> optimizes the low-dimensional layout;
-          <code>GetEmbedding()</code> returns one 2-D coordinate per image.</p></div>
-        <div class="step"><div class="no">Step 5</div><h3>Plot</h3>
-          <p>A <code>ScatterPlot</code> (800 &times; 600, <code>PlotTheme.Nature</code>) draws UMAP1 vs UMAP2 with
-          each point colored by its digit label.</p></div>
+        <div class="step"><div class="no">Step 1</div><h3>Build</h3>
+          <p>A 5&nbsp;&times;&nbsp;4 mesh, a 12-node chain, a 7-leaf star and a 5-node ring are assembled on
+          <code>NetworkGraph</code> with <code>AddNode</code> / <code>AddEdge</code>.</p></div>
+        <div class="step"><div class="no">Step 2</div><h3>Tangle</h3>
+          <p>Cross-links between mesh corners and row spans are added on purpose, and every vertex starts at a
+          random position (<code>Random(12345)</code>) so the layout has real work to do.</p></div>
+        <div class="step"><div class="no">Step 3</div><h3>Layout</h3>
+          <p><code>HOLA.DoLayout(g)</code> iterates the human-like orthogonal algorithm: remove edge crossings,
+          align parallel segments and fold the remaining overlaps.</p></div>
+        <div class="step"><div class="no">Step 4</div><h3>Render</h3>
+          <p><code>NetworkVisualizer.DrawImage</code> draws a 1400&nbsp;&times;&nbsp;1400 canvas with
+          <code>drawEdgeBends:=True</code> &mdash; every orthogonal bend point becomes visible polyline geometry.</p></div>
+        <div class="step"><div class="no">Step 5</div><h3>Report</h3>
+          <p>The script counts nodes, edges and bend-carrying edges from the laid-out graph and echoes them to the
+          console before saving the PNG.</p></div>
       </div>
     </section>
     <section id="script">
@@ -423,67 +423,146 @@
       <h2>Full demo source</h2>
       <p class="sub">The complete script exactly as executed by the sciBASIC# script engine (<code>vbs.exe</code>) &mdash; nothing elided.</p>
       <div class="codebox">
-        <div class="codebox-head"><span>mnist_umap.vb &middot; 40 lines</span><a href="assets/mnist_umap.vb" download>Download mnist_umap.vb</a></div>
-        <pre class="code" data-lang="vb"><code>#include &quot;Microsoft.VisualBasic.DataMining.UMAP.dll&quot;
-#include &quot;Microsoft.VisualBasic.MachineLearning.DataStorage.dll&quot;
-#include &quot;Microsoft.VisualBasic.DataMining.Framework.dll&quot;
+        <div class="codebox-head"><span>hola_layout.vb &middot; 117 lines</span><a href="assets/hola_layout.vb" download>Download hola_layout.vb</a></div>
+        <pre class="code" data-lang="vb"><code>#include &quot;Microsoft.VisualBasic.Data.visualize.Network.Visualizer.dll&quot;
+#include &quot;Microsoft.VisualBasic.Data.visualize.Network.Layouts.dll&quot;
+#include &quot;Microsoft.VisualBasic.Data.visualize.Network.dll&quot;
 #include &quot;Microsoft.VisualBasic.Drawing.dll&quot;
-#include &quot;Microsoft.VisualBasic.Data.DataPlot.dll&quot;
-#include &quot;Microsoft.VisualBasic.Math.Randomizer.dll&quot;
+#include &quot;Microsoft.VisualBasic.Data.GraphTheory.dll&quot;
+#include &quot;Microsoft.VisualBasic.Imaging.dll&quot;
 
-imports Microsoft.VisualBasic.MachineLearning.DataStorage
-imports Microsoft.VisualBasic.DataMining.ComponentModel.EntityModels
-imports Microsoft.VisualBasic.DataMining.UMAP
-imports Microsoft.VisualBasic.DataMining
-imports Microsoft.VisualBasic.Scripting.Runtime
-imports microsoft.visualbasic.data.plots
 imports microsoft.visualbasic.drawing
+Imports Microsoft.VisualBasic.Data.visualize.Network
+Imports Microsoft.VisualBasic.Data.visualize.Network.Graph
+Imports Microsoft.VisualBasic.Data.visualize.Network.Layouts
+Imports Microsoft.VisualBasic.Data.visualize.Network.Layouts.Orthogonal
+Imports Microsoft.VisualBasic.Data.visualize.Network.Layouts.Hola
+Imports inode = Microsoft.VisualBasic.Data.visualize.Network.Graph.Node
 
-dim mnist as new MNIST(
-    &quot;G:\GCModeller\src\R-sharp\test\demo\machineLearning\umap\mnist_dataset\train-images-idx3-ubyte&quot;, 
-    &quot;G:\GCModeller\src\R-sharp\test\demo\machineLearning\umap\mnist_dataset\train-labels-idx1-ubyte&quot;)
-dim dataset = mnist.ExtractDataSet(of ClusterEntity)().toarray()
-dim umap as new umap(dimensions := 2,numberOfNeighbors := 128 )
-dim n_epochs As Integer = umap.InitializeFit(dataset)
-dim number = dataset.ClassId().ascharacter().toarray()
+Dim g As New NetworkGraph
+Dim rnd As New Random(12345)
 
-Call umap.Step(n_epochs)
+&#x27; 用固定种子的随机散点作为 HOLA 起点，凸显去交叉/对齐/去重叠效果
+public function rndPos() as FDGVector2 
+    return New FDGVector2(rnd.NextDouble() * 1000.0, rnd.NextDouble() * 1000.0)
+End function
 
-dim manifold = umap.GetEmbedding()
-dim x = from v as double() in manifold select v(0)
-dim y = from v as double() in manifold select v(1)
+public sub addNode(label As String)
+    Call g.AddNode(New inode With {
+        .label = label,
+        .data = New NodeData With {
+            .initialPostion = rndPos(),
+            .size = {18, 18}
+        }
+    })
+End Sub
 
-call SkiaDriver.Register()
+&#x27; === 1) 网格块 5 x 4 = 20 节点 ===
+Dim rows = 5, cols = 4
+Dim grid(rows - 1, cols - 1) As String
+Dim nodeId = 0
+For r As Integer = 0 To rows - 1
+    For c As Integer = 0 To cols - 1
+        Dim id = &quot;n&quot; &amp; nodeId
+        grid(r, c) = id
+        addNode(id)
+        nodeId += 1
+    Next
+Next
+&#x27; 行列相邻边
+For r As Integer = 0 To rows - 1
+    For c As Integer = 0 To cols - 1
+        If c + 1 &lt; cols Then Call g.AddEdge(grid(r, c), grid(r, c + 1))
+        If r + 1 &lt; rows Then Call g.AddEdge(grid(r, c), grid(r + 1, c))
+    Next
+Next
+&#x27; 跨行/跨列边，刻意制造交叉
+Call g.AddEdge(grid(0, 0), grid(4, 3))
+Call g.AddEdge(grid(0, 3), grid(4, 0))
+Call g.AddEdge(grid(1, 1), grid(3, 2))
+Call g.AddEdge(grid(2, 0), grid(2, 3))
 
-Using plt As New ScatterPlot(800, 600, PlotTheme.Nature())
-    plt.Title = &quot;MNIST dataset UMAP embedding&quot;
-    plt.SubTitle = &quot;UMAP manifold of 2 dimensions&quot;
-    plt.XLabel = &quot;UMAP1&quot;
-    plt.YLabel = &quot;UMAP2&quot;
-    plt.Plot(DataSerials(x:=x.toarray(),y:=y.toarray(), number).tolist())
-    plt.SavePng(&quot;Z:/mnist-umap.png&quot;, 300)
-End Using
+&#x27; === 2) 链式结构 12 节点，两端接到网格块形成长边交叉 ===
+Dim chain(11) As String
+For i As Integer = 0 To 11
+    chain(i) = &quot;c&quot; &amp; i
+    addNode(chain(i))
+Next
+For i As Integer = 0 To 10
+    Call g.AddEdge(chain(i), chain(i + 1))
+Next
+&#x27; 链两端接到网格块对角，制造跨图长边
+Call g.AddEdge(chain(0), grid(0, 0))
+Call g.AddEdge(chain(11), grid(4, 3))
 
-</code></pre>
+&#x27; === 3) 星型结构 1 hub + 7 leaf，hub 连到网格块 ===
+Dim hub = &quot;hub&quot;
+Call addNode(hub)
+Call g.AddEdge(hub, grid(2, 1))   &#x27; hub 挂到网格块中心
+For i As Integer = 0 To 6
+    Dim leaf = &quot;leaf&quot; &amp; i
+    Call addNode(leaf)
+    Call g.AddEdge(hub, leaf)
+Next
+
+&#x27; === 4) 独立小连通分量 5 节点环，验证多分量不被误连 ===
+Dim ring = {&quot;r0&quot;, &quot;r1&quot;, &quot;r2&quot;, &quot;r3&quot;, &quot;r4&quot;}
+For Each rn In ring
+    Call addNode(rn)
+Next
+For i As Integer = 0 To ring.Length - 1
+    Call g.AddEdge(ring(i), ring((i + 1) Mod ring.Length))
+Next
+
+&#x27; === 执行 HOLA 布局 ===
+Call HOLA.DoLayout(g)
+
+&#x27; 统计节点/边/生成 bends 的边数
+Dim nodeCount = 0
+For Each n As inode In g.connectedNodes
+    nodeCount += 1
+Next
+Dim totalEdges = 0, bendCount = 0
+For Each e As Edge In g.graphEdges
+    totalEdges += 1
+    If e.data.bends IsNot Nothing AndAlso e.data.bends.Length &gt; 0 Then
+        bendCount += 1
+    End If
+Next
+
+console.WriteLine($&quot;=== HOLA complex network: {nodeCount} nodes, {totalEdges} edges, {bendCount} edges with bends ===&quot;)
+
+&#x27; 渲染为 PNG（放大画布以容纳更多节点；启用 drawEdgeBends 显示正交折点）
+Call SkiaDriver.Register()
+Call NetworkVisualizer.DrawImage(g, &quot;1400,1400&quot;,
+                                 displayId:=False,
+                                 drawEdgeBends:=True,
+                                 labelerIterations:=-1,
+                                 minLinkWidth:=8) _
+    .Save(&quot;Z:/HOLA_complex_layout.png&quot;)
+
+console.WriteLine(&quot;[HOLA] complex test done. see ./HOLA_complex_layout.png&quot;)</code></pre>
       </div>
     </section>
 
     <section id="results">
       <p class="sec-label"><b>03</b> <span>Results</span></p>
-      <h2>The 2-D manifold</h2>
+      <h2>The orthogonal schematic</h2>
       <figure class="fig">
-        <img src="assets/mnist-umap.png" width="800" height="600"
-             alt="UMAP embedding of the MNIST training split, points colored by digit label" />
-        <figcaption><b>Fig. 1</b> &mdash; UMAP embedding of the MNIST training split; every point is one
-          handwritten digit, colored by its label. The manifold resolves the handwriting styles into well-separated
-          islands, and structurally similar digits settle into neighboring lobes of the embedding.</figcaption>
+        <img src="assets/HOLA_complex_layout.png" width="1400" height="1400"
+             alt="Orthogonal HOLA layout of the synthetic 45-node test network" />
+        <figcaption><b>Fig. 1</b> &mdash; HOLA layout of the synthetic test network (45 nodes &middot; 61 edges
+          &middot; 2 connected components). Gray orthogonal polylines route the edges on a shared grid with visible
+          bend points; the 12-node chain bridges the mesh across the full canvas, the 7-leaf star hangs off its hub,
+          and the detached 5-ring keeps its own compact layout at the lower edge.</figcaption>
       </figure>
-      <div class="note">UMAP preserves local neighborhood structure: images that look alike stay adjacent after the
-        784-D&nbsp;&rarr;&nbsp;2-D projection, so the digit classes <b>emerge as islands without any use of the
-        labels during optimization</b> &mdash; labels only provide the colors in the final scatter.</div>
+      <div class="note">Nothing about the drawing is hand-tuned: the start positions are a fixed-seed random
+        scatter, and <b>every straight segment, corner and bend in the figure was produced by the layout
+        engine itself</b> &mdash; which is exactly what makes the output a usable regression fixture for the
+        visualizer.</div>
       <div class="dlrow">
-        <a class="dl" href="assets/mnist_umap.vb" download>mnist_umap.vb</a>
-        <a class="dl" href="assets/mnist-umap.png" download>mnist-umap.png</a>
+        <a class="dl" href="assets/hola_layout.vb" download>hola_layout.vb</a>
+        <a class="dl" href="assets/HOLA_complex_layout.png" download>HOLA_complex_layout.png</a>
       </div>
     </section>
 
@@ -492,8 +571,8 @@ End Using
   <!-- ================= footer ================= -->
   <footer class="site">
     <div class="pn">
-      <a href="demo-cuda.html"><span>Previous</span>Tutorial 02 &mdash; IL &#8594; CUDA</a>
-      <a href="demo-hola.html"><span>Next</span>Tutorial 04 &mdash; HOLA layout</a>
+      <a href="demo-mnist.html"><span>Previous</span>Tutorial 03 &mdash; UMAP manifold</a>
+      <a href="demo-tfidf.html"><span>Next</span>Tutorial 05 &mdash; TF-IDF heatmap</a>
     </div>
     <div class="legal">sciBASIC# &middot; GNU GPLv3 &middot; scibasic.net</div>
   </footer>
