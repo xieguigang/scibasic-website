@@ -1,8 +1,27 @@
 {
-  "https://scibasic.net/index.html": {
-    "md5": "52d51d09a86d096b5a30703f1a4bd1c1",
+  "https://scibasic.net/demo-cuda.html": {
+    "md5": "5e579c77cda78a1dceacf4262d746d1e",
     "timestamp": [
-      1788916632
+      1788917444
+    ]
+  },
+  "https://scibasic.net/demo-kmeans.html": {
+    "md5": "2102156bf68b30c5a7e1dbce19cdf8fd",
+    "timestamp": [
+      1788917444
+    ]
+  },
+  "https://scibasic.net/demo-mnist.html": {
+    "md5": "983c1a3a8f7b304033535f2497728d10",
+    "timestamp": [
+      1788917444
+    ]
+  },
+  "https://scibasic.net/index.html": {
+    "md5": "0ea104df2c5fac237a9be54134d9b4c3",
+    "timestamp": [
+      1788916632,
+      1788917444
     ]
   }
 }
