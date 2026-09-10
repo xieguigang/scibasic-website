@@ -285,6 +285,18 @@
       letter-spacing: .08em;
     }
 
+    .menu-foot a {
+      color: inherit;
+      text-decoration: none;
+      border-bottom: 1px solid rgba(255, 255, 255, .18);
+      transition: color .2s, border-color .2s;
+    }
+
+    .menu-foot a:hover {
+      color: var(--ink-dim);
+      border-color: rgba(255, 255, 255, .45);
+    }
+
     /* ---------- hero text block ---------- */
     .hero {
       position: absolute;
@@ -718,7 +730,7 @@
     <nav class="topnav">
       <a href="https://github.com/xieguigang/sciBASIC" target="_blank" rel="noopener">Library—</a>
       <a href="demo-kmeans.html">Tutorials—</a>
-      <a href="https://nuget.scibasic.net/" target="_blank" rel="noopener">Packages</a>
+      <a href="packages.html">Packages</a>
       <a href="https://github.com/xieguigang/sciBASIC/tree/master/docs" target="_blank" rel="noopener">Docs</a>
     </nav>
     <button class="menu-btn" id="menuBtn" aria-label="Menu"><span></span><span></span></button>
@@ -733,9 +745,10 @@
         rel="noopener">Module <em>Guides</em></a>
       <a class="big" href="https://github.com/xieguigang/sciBASIC/tree/master/tutorials" target="_blank"
         rel="noopener">Tutorials</a>
-      <a class="big" href="https://nuget.scibasic.net/" target="_blank" rel="noopener">Package <em>Index</em></a>
+      <a class="big" href="packages.html">Package <em>Index</em></a>
       <a class="big" href="mailto:xie.guigang@live.com">Contact</a>
-      <div class="menu-foot">sciBASIC# · GNU GPLv3 · scibasic.net</div>
+      <div class="menu-foot">sciBASIC# · GNU GPLv3 · scibasic.net · <a
+          href="https://scibasic.net/sitemap.xml">sitemap.xml</a></div>
     </nav>
   </div>
 
@@ -765,8 +778,14 @@
             <a class="cta" href="https://github.com/xieguigang/sciBASIC/tree/master/tutorials" target="_blank"
               rel="noopener">Get Started—</a>
           </div>
+          <div class="slide">
+            <h1>Native <span class="u">CUDA</span> heterogeneous computing with <span class="u">zero CUDA to
+                learn</span> — write plain VB.NET math functions and the framework generates the GPU kernels for
+              you.</h1>
+            <a class="cta" href="demo-cuda.html">See the GPU Demo—</a>
+          </div>
         </div>
-        <div class="dots reveal d2" id="heroDots"><i class="on"></i><i></i><i></i></div>
+        <div class="dots reveal d2" id="heroDots"><i class="on"></i><i></i><i></i><i></i></div>
       </div>
 
       <div class="foot">

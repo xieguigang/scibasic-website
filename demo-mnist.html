@@ -379,6 +379,9 @@
     .pn a span { display: block; font-size: 10px; letter-spacing: .3em; text-transform: uppercase; color: var(--ink-ghost); margin-bottom: 8px; }
 
     .legal { font-size: 11px; letter-spacing: .12em; color: var(--ink-ghost); }
+    .legal a { color: inherit; text-decoration: none; border-bottom: 1px solid var(--hairline2);
+      transition: color .2s, border-color .2s; }
+    .legal a:hover { color: var(--ink-faint); border-color: rgba(255, 255, 255, .4); }
 </style>
 </head>
 
@@ -392,7 +395,7 @@
     <nav class="topnav">
       <a href="https://github.com/xieguigang/sciBASIC" target="_blank" rel="noopener">Library&mdash;</a>
       <a href="demo-kmeans.html" class="on">Tutorials&mdash;</a>
-      <a href="https://nuget.scibasic.net/" target="_blank" rel="noopener" class="">Packages</a>
+      <a href="packages.html" class="">Packages</a>
       <a href="https://github.com/xieguigang/sciBASIC/tree/master/docs" target="_blank" rel="noopener">Docs</a>
     </nav>
     <a class="home-btn" href="./" aria-label="Back to home" title="Back to home">&#8598;</a>
@@ -509,7 +512,8 @@ End Using
       <a href="demo-cuda.html"><span>Previous</span>Tutorial 02 &mdash; IL &#8594; CUDA</a>
       <a href="demo-hola.html"><span>Next</span>Tutorial 04 &mdash; HOLA layout</a>
     </div>
-    <div class="legal">sciBASIC# &middot; GNU GPLv3 &middot; scibasic.net</div>
+    <div class="legal">sciBASIC# &middot; GNU GPLv3 &middot; scibasic.net &middot; <a
+        href="https://scibasic.net/sitemap.xml">sitemap.xml</a></div>
   </footer>
 
   <script>
