@@ -2,45 +2,51 @@
 <?xml-stylesheet type="text/xsl" href="sitemap.xsl"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://scibasic.net/index.html</loc>
-    <lastmod>2026-09-09</lastmod>
-    <changefreq>daily</changefreq>
+    <loc>https://scibasic.net/demo-kmeans.html</loc>
+    <lastmod>2026-09-11</lastmod>
+    <changefreq>weekly</changefreq>
     <priority>1.00</priority>
   </url>
   <url>
-    <loc>https://scibasic.net/demo-kmeans.html</loc>
-    <lastmod>2026-09-09</lastmod>
-    <changefreq>weekly</changefreq>
+    <loc>https://scibasic.net/index.html</loc>
+    <lastmod>2026-09-11</lastmod>
+    <changefreq>daily</changefreq>
     <priority>0.98</priority>
   </url>
   <url>
     <loc>https://scibasic.net/demo-mnist.html</loc>
-    <lastmod>2026-09-09</lastmod>
+    <lastmod>2026-09-11</lastmod>
     <changefreq>daily</changefreq>
-    <priority>0.94</priority>
+    <priority>0.95</priority>
   </url>
   <url>
     <loc>https://scibasic.net/demo-cuda.html</loc>
-    <lastmod>2026-09-09</lastmod>
+    <lastmod>2026-09-11</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.90</priority>
+    <priority>0.93</priority>
   </url>
   <url>
     <loc>https://scibasic.net/demo-hola.html</loc>
-    <lastmod>2026-09-09</lastmod>
+    <lastmod>2026-09-11</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.89</priority>
+    <priority>0.93</priority>
   </url>
   <url>
     <loc>https://scibasic.net/demo-tfidf.html</loc>
-    <lastmod>2026-09-09</lastmod>
+    <lastmod>2026-09-11</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.89</priority>
+    <priority>0.93</priority>
   </url>
   <url>
     <loc>https://scibasic.net/demo-word2vec.html</loc>
-    <lastmod>2026-09-09</lastmod>
+    <lastmod>2026-09-11</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.86</priority>
+    <priority>0.91</priority>
+  </url>
+  <url>
+    <loc>https://scibasic.net/packages.html</loc>
+    <lastmod>2026-09-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.87</priority>
   </url>
 </urlset>
