@@ -183,6 +183,19 @@
 
     .sec-label b { color: var(--green); font-weight: 500; }
     .sec-p { color: var(--ink-dim); font-size: 14px; line-height: 1.8; margin: 18px 0 0; max-width: 62em; }
+    .inl { color: var(--ink); text-decoration: none; border-bottom: 1px solid var(--hairline);
+      transition: color .2s, border-color .2s; }
+    .inl:hover { color: var(--green); border-color: var(--green); }
+    .step p code, .note code { overflow-wrap: anywhere; }
+    .go { margin-top: 56px; border: 1px solid var(--hairline); padding: 32px 38px; display: flex;
+      justify-content: space-between; align-items: center; gap: 24px; flex-wrap: wrap; text-decoration: none;
+      transition: border-color .25s, background .25s; }
+    .go:hover { border-color: rgba(255, 255, 255, .45); background: #0a0a0a; }
+    .go .t { font-size: clamp(19px, 2.4vw, 30px); font-weight: 400; color: var(--ink); letter-spacing: -.01em; }
+    .go .t em { font-style: normal; border-bottom: 1px solid rgba(255, 255, 255, .85); padding-bottom: 1px; }
+    .go .s { display: block; margin-top: 10px; font-size: 12.5px; color: var(--ink-faint); letter-spacing: .02em; }
+    .go .arr { font-size: 24px; color: var(--green); transition: transform .25s; }
+    .go:hover .arr { transform: translateX(6px); }
     h2.sub { margin-top: 46px; }
     table td.doc { font-family: var(--sans); font-size: 12.5px; line-height: 1.75; color: var(--ink-dim); }
     table td.word { font-family: var(--sans); font-size: 12.5px; color: var(--ink-dim); }
@@ -379,6 +392,7 @@
     <nav class="topnav">
       <a href="https://github.com/xieguigang/sciBASIC" target="_blank" rel="noopener">Library&mdash;</a>
       <a href="demo-kmeans.html" class="on">Tutorials&mdash;</a>
+      <a href="https://nuget.scibasic.net/" target="_blank" rel="noopener" class="">Packages</a>
       <a href="https://github.com/xieguigang/sciBASIC/tree/master/docs" target="_blank" rel="noopener">Docs</a>
     </nav>
     <a class="home-btn" href="./" aria-label="Back to home" title="Back to home">&#8598;</a>
