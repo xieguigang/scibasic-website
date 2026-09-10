@@ -1,60 +1,68 @@
 {
   "https://scibasic.net/demo-cuda.html": {
-    "md5": "d9dca62d986a1c2fcb1a3db1b251e5f3",
+    "md5": "5aeb8bee7db4e4fcadd325c2bc22e692",
     "timestamp": [
       1788917444,
-      1789077402
+      1789077402,
+      1789079242
     ]
   },
   "https://scibasic.net/demo-hola.html": {
-    "md5": "cc264a4f8bf17ba6bd9c1cb2c96a7ad6",
+    "md5": "f864612ada8c3dab2527901e9dd2f8a0",
     "timestamp": [
       1788950461,
-      1789077402
+      1789077402,
+      1789079242
     ]
   },
   "https://scibasic.net/demo-kmeans.html": {
-    "md5": "bdf07605238648365449ac0fe9b0a950",
+    "md5": "e34224ea881cfa064417b60b72b6bbea",
     "timestamp": [
       1788917444,
-      1789077402
+      1789077402,
+      1789079242
     ]
   },
   "https://scibasic.net/demo-mnist.html": {
-    "md5": "f43224773a2404b0e188636e954c77b5",
+    "md5": "324a0970c81c4a0c5399ecbfcefbfa84",
     "timestamp": [
       1788917444,
       1788950461,
-      1789077402
+      1789077402,
+      1789079242
     ]
   },
   "https://scibasic.net/demo-tfidf.html": {
-    "md5": "83f866c74605161d664873ea094887af",
+    "md5": "06d13c73c00af9df1afe4e54b51a4c08",
     "timestamp": [
       1788950461,
-      1789077402
+      1789077402,
+      1789079242
     ]
   },
   "https://scibasic.net/demo-word2vec.html": {
-    "md5": "ef6518c074712fedfe89d80cc22f0404",
+    "md5": "e4ecfc4ff22a3af2044f75394fc482f0",
     "timestamp": [
       1788950461,
-      1789077402
+      1789077402,
+      1789079242
     ]
   },
   "https://scibasic.net/index.html": {
-    "md5": "4bbb2fe39294db7f6a62e55e468e6a26",
+    "md5": "42cf9e153dd70f50d6cc4d73676b6219",
     "timestamp": [
       1788916632,
       1788917444,
       1788950461,
-      1789077402
+      1789077402,
+      1789079242
     ]
   },
   "https://scibasic.net/packages.html": {
-    "md5": "77b260642e3527c0c257f7a725106a84",
+    "md5": "d2fbd02f5b7c59c377620aa88669b6ce",
     "timestamp": [
-      1789077402
+      1789077402,
+      1789079242
     ]
   }
 }
